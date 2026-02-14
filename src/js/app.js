@@ -150,6 +150,10 @@ class CosmicLabApp {
             // Обработчик клика на планету
             card.addEventListener('click', () => {
                 UI.showPlanetInfo(planetData);
+                // Show planet fact from assistant
+                if (window.cosmicAssistant) {
+                    window.cosmicAssistant.showPlanetFact(planetId);
+                }
             });
             
             // Обработчик двойного клика для добавления в сравнение
