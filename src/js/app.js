@@ -34,7 +34,7 @@ class CosmicLabApp {
             window.gameProgress.unlockAchievement('first_launch');
         }
         
-        console.log('Космическая лаборатория — Миссия загружена');
+        console.log('🚀 Космическая лаборатория — Миссия загружена (Version 3)');
     }
 
     // Настройка главного экрана
@@ -152,16 +152,30 @@ class CosmicLabApp {
             const planetData = window.planetsData[planetId];
             const card = UI.createPlanetCard(planetId, planetData);
             
-            // Обработчик клика на планету
-            card.addEventListener('click', () => {
+            // Обработчик клика на планету (показывает информацию)
+            card.addEventListener('click', (e) => {
+                // Игнорируем клик, если это клик по кнопке сравнения
+                if (e.target.classList.contains('planet-compare-btn') || 
+                    e.target.classList.contains('compare-icon')) {
+                    return;
+                }
                 UI.showPlanetInfo(planetData);
             });
             
-            // Обработчик двойного клика для добавления в сравнение
-            card.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                this.addPlanetToComparison(planetId, planetData);
-            });
+            // Обработчик клика на кнопку сравнения
+            const compareBtn = card.querySelector('.planet-compare-btn');
+            if (compareBtn) {
+                compareBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    // Переключаем добавление/удаление планеты из сравнения
+                    if (this.selectedPlanetsForComparison.includes(planetId)) {
+                        this.removePlanetFromComparison(planetId);
+                    } else {
+                        this.addPlanetToComparison(planetId, planetData);
+                    }
+                });
+            }
             
             map.appendChild(card);
         });
@@ -455,50 +469,76 @@ class CosmicLabApp {
     startMinigame(gameType) {
         console.log('🎮 Starting game:', gameType);
         
-        UI.switchScreen('minigames-screen', 'game-container-screen');
-        
         const wrapper = document.getElementById('game-canvas-wrapper');
         if (!wrapper) {
             console.error('❌ Game wrapper not found!');
+            this.showGameError('Ошибка запуска', 'Не найден контейнер для игры. Пожалуйста, перезагрузите страницу.');
             return;
         }
         
+        UI.switchScreen('minigames-screen', 'game-container-screen');
         wrapper.innerHTML = '';
 
         const onGameComplete = (success, score) => {
             this.onGameComplete(gameType, success, score);
         };
 
+        let gameClass = null;
+        let gameName = 'Игра';
+
         switch(gameType) {
             case 'mars-landing':
-                if (window.MarsLandingGame) {
-                    console.log('✅ MarsLandingGame found');
-                    this.currentGame = new MarsLandingGame(wrapper, onGameComplete);
-                    this.currentGame.init();
-                } else {
-                    console.error('❌ MarsLandingGame not loaded!');
-                }
+                gameClass = window.MarsLandingGame;
+                gameName = 'Посадка на Марс';
                 break;
             
             case 'asteroid-navigator':
-                if (window.AsteroidNavigatorGame) {
-                    console.log('✅ AsteroidNavigatorGame found');
-                    this.currentGame = new AsteroidNavigatorGame(wrapper, onGameComplete);
-                    this.currentGame.init();
-                } else {
-                    console.error('❌ AsteroidNavigatorGame not loaded!');
-                }
+                gameClass = window.AsteroidNavigatorGame;
+                gameName = 'Навигатор астероидов';
                 break;
             
             case 'resource-collector':
-                if (window.ResourceCollectorGame) {
-                    console.log('✅ ResourceCollectorGame found');
-                    this.currentGame = new ResourceCollectorGame(wrapper, onGameComplete);
-                    this.currentGame.init();
-                } else {
-                    console.error('❌ ResourceCollectorGame not loaded!');
-                }
+                gameClass = window.ResourceCollectorGame;
+                gameName = 'Сборщик ресурсов';
                 break;
+            
+            default:
+                console.error(`❌ Неизвестный тип игры: ${gameType}`);
+                gameName = 'Неизвестная игра';
+                break;
+        }
+
+        if (gameClass) {
+            console.log(`✅ ${gameName} загружена`);
+            try {
+                this.currentGame = new gameClass(wrapper, onGameComplete);
+                this.currentGame.init();
+            } catch (error) {
+                console.error(`❌ Ошибка инициализации ${gameName}:`, error);
+                this.showGameError('Ошибка запуска', `Не удалось запустить игру "${gameName}". Попробуйте другую игру.`);
+                this.exitGame();
+            }
+        } else {
+            console.error(`❌ ${gameName} не загружена!`);
+            this.showGameError('Игра недоступна', `Игра "${gameName}" не загружена. Пожалуйста, перезагрузите страницу.`);
+            this.exitGame();
+        }
+    }
+
+    // Показать ошибку запуска игры
+    showGameError(title, message) {
+        const wrapper = document.getElementById('game-canvas-wrapper');
+        if (wrapper) {
+            wrapper.innerHTML = `
+                <div class="game-error-container">
+                    <div class="game-error-icon">⚠️</div>
+                    <h2 class="game-error-title">${title}</h2>
+                    <p class="game-error-message">${message}</p>
+                    <button class="btn btn-primary glow-btn game-error-button" onclick="document.getElementById('exit-game').click()">
+                        Вернуться к играм
+                    </button>
+                </div>
+            `;
         }
     }
 
