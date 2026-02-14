@@ -49,7 +49,8 @@
     font-size: 5rem;
     margin-bottom: 1rem;
     filter: drop-shadow(0 0 10px rgba(76, 201, 240, 0.5));
-    animation: float 3s ease-in-out infinite;
+    animation: float 3s ease-in-out infinite, rotate-planet 20s linear infinite;
+    transform-style: preserve-3d;
 }
 
 .planet-name {

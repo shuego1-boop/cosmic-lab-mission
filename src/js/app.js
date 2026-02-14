@@ -4,12 +4,16 @@ class CosmicLabApp {
     constructor() {
         this.difficulty = null;
         this.selectedPlanetsForComparison = [];
+        this.currentMission = null;
         this.init();
     }
 
     init() {
         // Обработчики главного экрана
         this.setupMainScreen();
+        
+        // Обработчики выбора миссии
+        this.setupMissionSelectScreen();
         
         // Обработчики карты солнечной системы
         this.setupSolarSystemScreen();
@@ -19,6 +23,11 @@ class CosmicLabApp {
         
         // Обработчики результатов
         this.setupResultsScreen();
+        
+        // Unlock first launch achievement
+        if (window.gameProgress) {
+            window.gameProgress.unlockAchievement('first_launch');
+        }
         
         console.log('Космическая лаборатория — Миссия загружена');
     }
@@ -44,8 +53,89 @@ class CosmicLabApp {
 
     // Начало игры
     startGame() {
-        UI.switchScreen('main-screen', 'solar-system-screen');
+        UI.switchScreen('main-screen', 'mission-select-screen');
+        this.loadMissionCards();
+    }
+    
+    // Load mission selection cards
+    loadMissionCards() {
+        const container = document.getElementById('mission-cards-container');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        Object.values(window.missionTypes).forEach(mission => {
+            const card = document.createElement('div');
+            card.className = 'mission-card glass-card';
+            card.dataset.missionId = mission.id;
+            
+            card.innerHTML = `
+                <div class="mission-card-content">
+                    <div class="mission-icon">${mission.icon}</div>
+                    <h3 class="mission-title">${mission.name}</h3>
+                    <p class="mission-subtitle">${mission.subtitle}</p>
+                    <div class="mission-stats">
+                        <div class="mission-stat">
+                            <span class="mission-stat-label">Сложность:</span>
+                            <span class="mission-stat-value difficulty-${mission.difficulty}">${mission.difficultyLabel}</span>
+                        </div>
+                        <div class="mission-stat">
+                            <span class="mission-stat-label">Длительность:</span>
+                            <span class="mission-stat-value">${mission.duration} мин</span>
+                        </div>
+                        <div class="mission-stat">
+                            <span class="mission-stat-label">Награда:</span>
+                            <span class="mission-stat-value">${mission.rewards.points} очков</span>
+                        </div>
+                    </div>
+                    <p style="text-align: center; color: var(--color-gray); margin-top: 1rem;">${mission.description}</p>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => {
+                this.selectMission(mission.id);
+            });
+            
+            container.appendChild(card);
+        });
+    }
+    
+    // Select a mission
+    selectMission(missionId) {
+        this.currentMission = missionId;
+        const mission = window.missionTypes[missionId];
+        
+        if (window.gameProgress) {
+            window.gameProgress.initMissionResources(missionId);
+        }
+        
+        // Update briefing with mission-specific content
+        this.updateBriefing(mission);
+        
+        // Load solar system before switching
         this.loadSolarSystem();
+        
+        UI.switchScreen('mission-select-screen', 'solar-system-screen');
+    }
+    
+    // Update briefing with mission content
+    updateBriefing(mission) {
+        const briefingText = document.querySelector('.briefing-text');
+        if (briefingText) {
+            briefingText.innerHTML = `
+                <p class="briefing-intro">🛸 <strong>Миссия: ${mission.name}</strong></p>
+                ${mission.briefing}
+                <h3>Задачи миссии:</h3>
+                <ul>
+                    ${mission.objectives.map(obj => `<li>✓ ${obj}</li>`).join('')}
+                </ul>
+            `;
+        }
+    }
+    
+    // Setup mission select screen
+    setupMissionSelectScreen() {
+        // Mission cards are set up dynamically
     }
 
     // Загрузка солнечной системы
@@ -74,6 +164,9 @@ class CosmicLabApp {
 
     // Настройка экрана солнечной системы
     setupSolarSystemScreen() {
+        // Load solar system when screen becomes active
+        // We'll trigger this from continue button
+        
         // Кнопка закрытия информации о планете
         const closeBtn = document.getElementById('close-planet-info');
         closeBtn.addEventListener('click', () => {
@@ -162,9 +255,53 @@ class CosmicLabApp {
     setupBriefingScreen() {
         const startMissionBtn = document.getElementById('start-mission-stages');
         startMissionBtn.addEventListener('click', () => {
-            UI.switchScreen('briefing-screen', 'mission-screen');
-            window.Mission.init(this.difficulty);
+            // Show launch screen with countdown
+            UI.switchScreen('briefing-screen', 'launch-screen');
+            
+            // Initialize resource panel
+            if (window.gameProgress) {
+                window.gameProgress.displayResources();
+            }
+            
+            // Start countdown
+            if (window.AnimationsController) {
+                window.AnimationsController.launchCountdown(() => {
+                    // After launch, show flight animation
+                    this.startFlightSequence();
+                });
+            } else {
+                // Fallback if animations not loaded
+                setTimeout(() => this.startFlightSequence(), 3000);
+            }
         });
+    }
+    
+    // Start flight sequence
+    startFlightSequence() {
+        UI.switchScreen('launch-screen', 'flight-screen');
+        
+        if (window.AnimationsController) {
+            // Flight animation duration depends on mission
+            const mission = window.missionTypes[this.currentMission];
+            const flightDuration = mission ? mission.duration : 5; // seconds for demo
+            
+            window.AnimationsController.flightAnimation(
+                'earth',
+                mission ? mission.target : 'mars',
+                flightDuration,
+                () => {
+                    // After flight, go to solar system or mission stages
+                    UI.switchScreen('flight-screen', 'mission-screen');
+                    window.Mission.init(this.difficulty);
+                }
+            );
+        } else {
+            // Fallback
+            setTimeout(() => {
+                UI.switchScreen('flight-screen', 'mission-screen');
+                window.Mission.init(this.difficulty);
+            }, 5000);
+        }
     }
 
     // Настройка экрана результатов
