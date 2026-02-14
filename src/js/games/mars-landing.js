@@ -1,8 +1,10 @@
 // Mars Landing Simulator - Full Physics Game
 
 class MarsLandingGame {
-    constructor(containerId, callback) {
-        this.containerId = containerId;
+    constructor(containerElement, callback) {
+        this.container = typeof containerElement === 'string' 
+            ? document.getElementById(containerElement) 
+            : containerElement;
         this.callback = callback;
         
         // Physics constants
@@ -40,10 +42,9 @@ class MarsLandingGame {
     }
     
     init() {
-        const container = document.getElementById(this.containerId);
-        if (!container) return;
+        if (!this.container) return;
         
-        container.innerHTML = this.createGameHTML();
+        this.container.innerHTML = this.createGameHTML();
         this.setupControls();
         this.start();
     }

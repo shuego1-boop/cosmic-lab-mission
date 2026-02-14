@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/planets.css">
     <link rel="stylesheet" href="css/glassmorphism.css">
     <link rel="stylesheet" href="css/gamification.css">
+    <link rel="stylesheet" href="css/minigames.css">
 </head>
 <body>
     <!-- Анимированный фон со звёздами -->
@@ -83,7 +84,10 @@
         <div class="container">
             <div class="screen-header">
                 <h2 class="screen-title">Солнечная система</h2>
-                <button class="btn btn-secondary" id="continue-to-briefing">Продолжить →</button>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-secondary" id="go-to-minigames">🎮 Мини-игры</button>
+                    <button class="btn btn-secondary" id="continue-to-briefing">Продолжить →</button>
+                </div>
             </div>
             
             <!-- Animated Sun -->
@@ -111,6 +115,75 @@
                 <button class="btn btn-small" id="clear-comparison">Очистить</button>
             </div>
         </div>
+    </div>
+
+    <!-- Экран мини-игр -->
+    <div id="minigames-screen" class="screen">
+        <div class="container">
+            <h2 class="screen-title glow-text">🎮 Космические мини-игры</h2>
+            <p class="subtitle">Проверьте свои навыки космического пилота!</p>
+            
+            <div class="minigames-grid">
+                <div class="minigame-card">
+                    <div class="minigame-icon">🚀</div>
+                    <h3>Посадка на Марс</h3>
+                    <p>Управляйте двигателями для мягкой посадки на поверхность красной планеты</p>
+                    <div class="minigame-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="mars-best-score">-</span>
+                            <span class="stat-label">Лучший счёт</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="mars-played">0</span>
+                            <span class="stat-label">Игр сыграно</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary glow-btn" id="start-mars-landing">🚀 Играть</button>
+                </div>
+                
+                <div class="minigame-card">
+                    <div class="minigame-icon">🌑</div>
+                    <h3>Навигатор астероидов</h3>
+                    <p>Проложите безопасный маршрут между астероидами и достигните цели</p>
+                    <div class="minigame-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="asteroid-best-score">-</span>
+                            <span class="stat-label">Лучший счёт</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="asteroid-played">0</span>
+                            <span class="stat-label">Игр сыграно</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary glow-btn" id="start-asteroid-navigator">🌑 Играть</button>
+                </div>
+                
+                <div class="minigame-card">
+                    <div class="minigame-icon">⛏️</div>
+                    <h3>Сборщик ресурсов</h3>
+                    <p>Соберите максимум ресурсов за ограниченное время</p>
+                    <div class="minigame-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="resource-best-score">-</span>
+                            <span class="stat-label">Лучший счёт</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="resource-played">0</span>
+                            <span class="stat-label">Игр сыграно</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary glow-btn" id="start-resource-collector">⛏️ Играть</button>
+                </div>
+            </div>
+            
+            <button class="btn btn-secondary" id="back-from-minigames">← Назад к карте</button>
+        </div>
+    </div>
+
+    <!-- Контейнер для запущенной игры -->
+    <div id="game-container-screen" class="screen">
+        <div id="game-canvas-wrapper"></div>
+        <button class="btn btn-secondary" id="exit-game">❌ Выход</button>
     </div>
 
     <!-- Модуль брифинга миссии -->
@@ -272,6 +345,9 @@
     <script src="js/ui.js"></script>
     <script src="js/mission.js"></script>
     <script src="js/quiz.js"></script>
+    <script src="js/games/mars-landing.js"></script>
+    <script src="js/games/asteroid-navigator.js"></script>
+    <script src="js/games/resource-collector.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
