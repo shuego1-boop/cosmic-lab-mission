@@ -255,9 +255,53 @@ class CosmicLabApp {
     setupBriefingScreen() {
         const startMissionBtn = document.getElementById('start-mission-stages');
         startMissionBtn.addEventListener('click', () => {
-            UI.switchScreen('briefing-screen', 'mission-screen');
-            window.Mission.init(this.difficulty);
+            // Show launch screen with countdown
+            UI.switchScreen('briefing-screen', 'launch-screen');
+            
+            // Initialize resource panel
+            if (window.gameProgress) {
+                window.gameProgress.displayResources();
+            }
+            
+            // Start countdown
+            if (window.AnimationsController) {
+                window.AnimationsController.launchCountdown(() => {
+                    // After launch, show flight animation
+                    this.startFlightSequence();
+                });
+            } else {
+                // Fallback if animations not loaded
+                setTimeout(() => this.startFlightSequence(), 3000);
+            }
         });
+    }
+    
+    // Start flight sequence
+    startFlightSequence() {
+        UI.switchScreen('launch-screen', 'flight-screen');
+        
+        if (window.AnimationsController) {
+            // Flight animation duration depends on mission
+            const mission = window.missionTypes[this.currentMission];
+            const flightDuration = mission ? mission.duration : 5; // seconds for demo
+            
+            window.AnimationsController.flightAnimation(
+                'earth',
+                mission ? mission.target : 'mars',
+                flightDuration,
+                () => {
+                    // After flight, go to solar system or mission stages
+                    UI.switchScreen('flight-screen', 'mission-screen');
+                    window.Mission.init(this.difficulty);
+                }
+            );
+        } else {
+            // Fallback
+            setTimeout(() => {
+                UI.switchScreen('flight-screen', 'mission-screen');
+                window.Mission.init(this.difficulty);
+            }, 5000);
+        }
     }
 
     // Настройка экрана результатов
