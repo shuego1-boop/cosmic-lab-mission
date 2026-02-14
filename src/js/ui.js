@@ -13,6 +13,11 @@ const UI = {
         if (toScreen) {
             toScreen.classList.add('active');
             toScreen.scrollTop = 0; // Прокрутка наверх
+            
+            // Update assistant context
+            if (window.cosmicAssistant) {
+                window.cosmicAssistant.updateContext(toScreenId);
+            }
         }
     },
 

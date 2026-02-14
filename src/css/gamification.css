@@ -405,7 +405,7 @@
     white-space: nowrap;
 }
 
-/* Responsive */
+/* Адаптивность */
 @media (max-width: 768px) {
     .resource-panel {
         flex-direction: column;
@@ -427,5 +427,167 @@
     .achievement-badge {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* Cosmic Assistant Styles */
+.cosmic-assistant {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.assistant-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 
+        0 0 30px rgba(0, 240, 255, 0.6),
+        0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: assistant-pulse 3s ease-in-out infinite;
+}
+
+.assistant-avatar:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 
+        0 0 40px rgba(0, 240, 255, 0.8),
+        0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes assistant-pulse {
+    0%, 100% {
+        box-shadow: 
+            0 0 30px rgba(0, 240, 255, 0.6),
+            0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+        box-shadow: 
+            0 0 50px rgba(0, 240, 255, 0.9),
+            0 15px 40px rgba(0, 0, 0, 0.4);
+    }
+}
+
+.assistant-robot {
+    font-size: 3rem;
+    animation: assistant-bounce 2s ease-in-out infinite;
+}
+
+@keyframes assistant-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.assistant-speech-bubble {
+    background: rgba(22, 33, 62, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid var(--neon-cyan);
+    border-radius: 20px;
+    padding: 1.5rem;
+    max-width: 350px;
+    position: relative;
+    box-shadow: 
+        0 0 30px rgba(0, 240, 255, 0.4),
+        0 10px 40px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.cosmic-assistant.active .assistant-speech-bubble {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.assistant-speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 20px;
+    right: -10px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 10px 0 10px 15px;
+    border-color: transparent transparent transparent var(--neon-cyan);
+}
+
+.assistant-message {
+    color: white;
+    font-size: 1rem;
+    line-height: 1.6;
+    font-family: 'Inter', sans-serif;
+}
+
+.assistant-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 107, 53, 0.6);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.assistant-close:hover {
+    background: rgba(255, 107, 53, 1);
+    transform: rotate(90deg);
+}
+
+/* Slide out animation for notifications */
+@keyframes slideOutToRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+/* Mobile adjustments for assistant */
+@media (max-width: 768px) {
+    .cosmic-assistant {
+        bottom: 10px;
+        right: 10px;
+    }
+    
+    .assistant-avatar {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .assistant-robot {
+        font-size: 2rem;
+    }
+    
+    .assistant-speech-bubble {
+        max-width: 250px;
+        padding: 1rem;
+        font-size: 0.9rem;
     }
 }

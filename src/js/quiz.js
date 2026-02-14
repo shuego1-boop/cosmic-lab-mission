@@ -99,6 +99,22 @@ const Quiz = {
         const recommendations = this.generateRecommendations();
         
         UI.showResults(totalScore, maxScore, breakdown, recommendations);
+        
+        // Update gamification stats and display achievements
+        if (window.gameProgress) {
+            const completed = totalScore >= (maxScore * 0.6); // 60% is pass
+            window.gameProgress.updateMissionStats(completed, totalScore);
+            
+            // Display achievements
+            setTimeout(() => {
+                window.gameProgress.displayAchievements('achievements-container');
+            }, 500);
+            
+            // Celebrate if mission successful
+            if (window.cosmicAssistant && completed) {
+                window.cosmicAssistant.say('success');
+            }
+        }
     },
 
     // Генерация рекомендаций
