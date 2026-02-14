@@ -152,16 +152,30 @@ class CosmicLabApp {
             const planetData = window.planetsData[planetId];
             const card = UI.createPlanetCard(planetId, planetData);
             
-            // Обработчик клика на планету
-            card.addEventListener('click', () => {
+            // Клик на карточку = показать info
+            card.addEventListener('click', (e) => {
+                // Игнорируем клик если это кнопка сравнения
+                if (e.target.closest('.planet-compare-btn')) {
+                    return;
+                }
                 UI.showPlanetInfo(planetData);
             });
             
-            // Обработчик двойного клика для добавления в сравнение
-            card.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                this.addPlanetToComparison(planetId, planetData);
-            });
+            // Кнопка сравнения
+            const compareBtn = card.querySelector('.planet-compare-btn');
+            if (compareBtn) {
+                compareBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Не открывать info
+                    
+                    if (this.selectedPlanetsForComparison.includes(planetId)) {
+                        // Убрать из сравнения
+                        this.removePlanetFromComparison(planetId);
+                    } else {
+                        // Добавить к сравнению
+                        this.addPlanetToComparison(planetId, planetData);
+                    }
+                });
+            }
             
             map.appendChild(card);
         });
@@ -376,12 +390,17 @@ class CosmicLabApp {
 
     // Настройка экрана мини-игр
     setupMinigamesScreen() {
+        console.log('🎮 Setting up minigames screen...');
+        
         const goToMinigamesBtn = document.getElementById('go-to-minigames');
         if (goToMinigamesBtn) {
             goToMinigamesBtn.addEventListener('click', () => {
+                console.log('✅ Go to minigames clicked');
                 UI.switchScreen('solar-system-screen', 'minigames-screen');
                 this.loadMinigameStats();
             });
+        } else {
+            console.warn('❌ go-to-minigames button not found');
         }
 
         const backBtn = document.getElementById('back-from-minigames');
@@ -391,19 +410,43 @@ class CosmicLabApp {
             });
         }
 
+        // MARS LANDING
         const marsBtn = document.getElementById('start-mars-landing');
+        console.log('Mars button:', marsBtn);
         if (marsBtn) {
-            marsBtn.addEventListener('click', () => this.startMinigame('mars-landing'));
+            console.log('✅ Adding click listener to Mars button');
+            marsBtn.addEventListener('click', () => {
+                console.log('🚀 Mars Landing clicked!');
+                this.startMinigame('mars-landing');
+            });
+        } else {
+            console.error('❌ start-mars-landing button NOT FOUND!');
         }
 
+        // ASTEROID NAVIGATOR
         const asteroidBtn = document.getElementById('start-asteroid-navigator');
+        console.log('Asteroid button:', asteroidBtn);
         if (asteroidBtn) {
-            asteroidBtn.addEventListener('click', () => this.startMinigame('asteroid-navigator'));
+            console.log('✅ Adding click listener to Asteroid button');
+            asteroidBtn.addEventListener('click', () => {
+                console.log('🌑 Asteroid Navigator clicked!');
+                this.startMinigame('asteroid-navigator');
+            });
+        } else {
+            console.error('❌ start-asteroid-navigator button NOT FOUND!');
         }
 
+        // RESOURCE COLLECTOR
         const resourceBtn = document.getElementById('start-resource-collector');
+        console.log('Resource button:', resourceBtn);
         if (resourceBtn) {
-            resourceBtn.addEventListener('click', () => this.startMinigame('resource-collector'));
+            console.log('✅ Adding click listener to Resource button');
+            resourceBtn.addEventListener('click', () => {
+                console.log('⛏️ Resource Collector clicked!');
+                this.startMinigame('resource-collector');
+            });
+        } else {
+            console.error('❌ start-resource-collector button NOT FOUND!');
         }
 
         const exitBtn = document.getElementById('exit-game');
@@ -429,6 +472,8 @@ class CosmicLabApp {
                 UI.switchScreen('game-container-screen', 'main-screen');
             });
         }
+        
+        console.log('✅ Minigames screen setup complete');
     }
 
     // Загрузка статистики
@@ -453,16 +498,22 @@ class CosmicLabApp {
 
     // Запуск мини-игры
     startMinigame(gameType) {
-        console.log('🎮 Starting game:', gameType);
+        console.log('🎮 startMinigame called with:', gameType);
+        console.log('Available game classes:', {
+            MarsLandingGame: !!window.MarsLandingGame,
+            AsteroidNavigatorGame: !!window.AsteroidNavigatorGame,
+            ResourceCollectorGame: !!window.ResourceCollectorGame
+        });
         
         UI.switchScreen('minigames-screen', 'game-container-screen');
         
         const wrapper = document.getElementById('game-canvas-wrapper');
         if (!wrapper) {
-            console.error('❌ Game wrapper not found!');
+            console.error('❌ game-canvas-wrapper NOT FOUND!');
             return;
         }
         
+        console.log('✅ Game wrapper found:', wrapper);
         wrapper.innerHTML = '';
 
         const onGameComplete = (success, score) => {
@@ -472,33 +523,42 @@ class CosmicLabApp {
         switch(gameType) {
             case 'mars-landing':
                 if (window.MarsLandingGame) {
-                    console.log('✅ MarsLandingGame found');
+                    console.log('✅ Creating MarsLandingGame...');
                     this.currentGame = new MarsLandingGame(wrapper, onGameComplete);
                     this.currentGame.init();
+                    console.log('✅ MarsLandingGame initialized');
                 } else {
-                    console.error('❌ MarsLandingGame not loaded!');
+                    console.error('❌ MarsLandingGame class not loaded!');
+                    alert('Ошибка: игра "Посадка на Марс" не загружена. Проверьте консоль.');
                 }
                 break;
             
             case 'asteroid-navigator':
                 if (window.AsteroidNavigatorGame) {
-                    console.log('✅ AsteroidNavigatorGame found');
+                    console.log('✅ Creating AsteroidNavigatorGame...');
                     this.currentGame = new AsteroidNavigatorGame(wrapper, onGameComplete);
                     this.currentGame.init();
+                    console.log('✅ AsteroidNavigatorGame initialized');
                 } else {
-                    console.error('❌ AsteroidNavigatorGame not loaded!');
+                    console.error('❌ AsteroidNavigatorGame class not loaded!');
+                    alert('Ошибка: игра "Навигатор астероидов" не загружена. Проверьте консоль.');
                 }
                 break;
             
             case 'resource-collector':
                 if (window.ResourceCollectorGame) {
-                    console.log('✅ ResourceCollectorGame found');
+                    console.log('✅ Creating ResourceCollectorGame...');
                     this.currentGame = new ResourceCollectorGame(wrapper, onGameComplete);
                     this.currentGame.init();
+                    console.log('✅ ResourceCollectorGame initialized');
                 } else {
-                    console.error('❌ ResourceCollectorGame not loaded!');
+                    console.error('❌ ResourceCollectorGame class not loaded!');
+                    alert('Ошибка: игра "Сборщик ресурсов" не загружена. Проверьте консоль.');
                 }
                 break;
+                
+            default:
+                console.error('❌ Unknown game type:', gameType);
         }
     }
 

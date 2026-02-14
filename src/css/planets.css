@@ -9,7 +9,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Важно для кнопки */
     min-height: 250px;
     display: flex;
     flex-direction: column;
@@ -43,6 +43,59 @@
 .planet-card.selected {
     border-color: var(--color-gold);
     box-shadow: 0 10px 40px rgba(255, 215, 0, 0.4);
+}
+
+.planet-compare-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(76, 201, 240, 0.9);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 10;
+    box-shadow: 0 4px 15px rgba(76, 201, 240, 0.4);
+}
+
+.planet-card:hover .planet-compare-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.planet-compare-btn:hover {
+    background: rgba(76, 201, 240, 1);
+    box-shadow: 0 6px 20px rgba(76, 201, 240, 0.6);
+    transform: scale(1.05);
+}
+
+.planet-compare-btn:active {
+    transform: scale(0.98);
+}
+
+.planet-compare-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Подсветка выбранной планеты */
+.planet-card.selected .planet-compare-btn {
+    background: rgba(255, 193, 7, 0.9);
+    opacity: 1;
+}
+
+.planet-card.selected .planet-compare-btn span::before {
+    content: '✓ ';
 }
 
 .planet-icon {
