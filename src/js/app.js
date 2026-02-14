@@ -215,6 +215,14 @@ class CosmicLabApp {
         });
     }
 
+    // Обновление видимости кнопки сравнения
+    updateCompareButtonVisibility() {
+        const compareBtn = document.getElementById('compare-planets-btn');
+        if (compareBtn) {
+            compareBtn.style.display = this.selectedPlanetsForComparison.length >= 2 ? 'block' : 'none';
+        }
+    }
+
     // Добавление планеты в сравнение
     addPlanetToComparison(planetId, planetData) {
         if (UI.addToComparison(planetId, planetData, this.selectedPlanetsForComparison)) {
@@ -226,11 +234,7 @@ class CosmicLabApp {
                 card.classList.add('selected');
             }
             
-            // Показываем кнопку сравнения если выбрано ≥2
-            const compareBtn = document.getElementById('compare-planets-btn');
-            if (compareBtn && this.selectedPlanetsForComparison.length >= 2) {
-                compareBtn.style.display = 'block';
-            }
+            this.updateCompareButtonVisibility();
         }
     }
 
@@ -249,11 +253,7 @@ class CosmicLabApp {
             card.classList.remove('selected');
         }
         
-        // Скрываем кнопку если < 2
-        const compareBtn = document.getElementById('compare-planets-btn');
-        if (compareBtn && this.selectedPlanetsForComparison.length < 2) {
-            compareBtn.style.display = 'none';
-        }
+        this.updateCompareButtonVisibility();
     }
 
     // Очистка сравнения
@@ -270,11 +270,7 @@ class CosmicLabApp {
         
         this.selectedPlanetsForComparison = [];
         
-        // Скрываем кнопку
-        const compareBtn = document.getElementById('compare-planets-btn');
-        if (compareBtn) {
-            compareBtn.style.display = 'none';
-        }
+        this.updateCompareButtonVisibility();
     }
 
     // Настройка экрана брифинга
