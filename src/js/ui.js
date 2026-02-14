@@ -158,12 +158,22 @@ const UI = {
         const feedbackContainer = document.getElementById('stage-feedback');
         const nextBtnContainer = document.getElementById('stage-next-btn');
         
+        // Pre-render with opacity 0 to prevent jumping
         feedbackContainer.innerHTML = `
             <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">
                 <div class="feedback-title">${isCorrect ? '✅ Верно!' : '❌ Неверно'}</div>
                 <p>${option.feedback}</p>
             </div>
         `;
+        
+        // Smooth fade-in after DOM is ready
+        const feedback = feedbackContainer.querySelector('.feedback');
+        if (feedback) {
+            feedback.offsetHeight; // Force reflow
+            requestAnimationFrame(() => {
+                feedback.classList.add('show');
+            });
+        }
         
         nextBtnContainer.innerHTML = `
             <button class="btn btn-primary btn-large glow-btn" id="next-stage-btn" style="margin-top: 2rem;">
@@ -196,6 +206,7 @@ const UI = {
     showQuizFeedback(question, selectedIndex, isCorrect) {
         const feedbackContainer = document.getElementById('quiz-feedback');
         
+        // Pre-render with opacity 0 to prevent jumping
         feedbackContainer.innerHTML = `
             <div class="feedback ${isCorrect ? 'correct' : 'incorrect'}">
                 <div class="feedback-title">${isCorrect ? '✅ Правильно!' : '❌ Неправильно'}</div>
@@ -203,6 +214,17 @@ const UI = {
                 <p>${question.explanation}</p>
             </div>
         `;
+        
+        // Smooth fade-in after DOM is ready
+        const feedback = feedbackContainer.querySelector('.feedback');
+        if (feedback) {
+            // Force reflow to ensure transition works
+            feedback.offsetHeight;
+            // Add show class to trigger opacity transition
+            requestAnimationFrame(() => {
+                feedback.classList.add('show');
+            });
+        }
     },
 
     // Показ финальных результатов
