@@ -223,6 +223,30 @@ h1, h2, h3, h4 {
 }
 
 /* Карты и панели */
+.solar-system-sun {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 2rem;
+}
+
+.sun-orb {
+    display: inline-block;
+    font-size: 8rem;
+    animation: sun-pulse 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes sun-pulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 50px rgba(255, 215, 0, 1));
+    }
+}
+
 .solar-system-map {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
