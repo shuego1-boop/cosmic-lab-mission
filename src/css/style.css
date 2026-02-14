@@ -1,6 +1,7 @@
 /* Основные стили космического интерфейса */
 
 :root {
+    /* Original colors */
     --color-dark-bg: #0a0a2e;
     --color-dark-blue: #16213e;
     --color-purple: #7b2cbf;
@@ -11,9 +12,19 @@
     --color-white: #ffffff;
     --color-gray: #a8b2d1;
     
+    /* Premium neon colors */
+    --neon-cyan: #00f0ff;
+    --neon-purple: #bf00ff;
+    --neon-pink: #ff00bf;
+    --space-gold: #ffd700;
+    --deep-space: #0a0015;
+    
+    /* Glow effects */
     --glow-blue: 0 0 20px rgba(76, 201, 240, 0.6);
     --glow-purple: 0 0 20px rgba(123, 44, 191, 0.6);
     --glow-gold: 0 0 20px rgba(255, 215, 0, 0.6);
+    --glow-cyan: 0 0 25px rgba(0, 240, 255, 0.7);
+    --glow-pink: 0 0 25px rgba(255, 0, 191, 0.7);
 }
 
 * {

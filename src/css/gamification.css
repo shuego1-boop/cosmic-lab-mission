@@ -1,0 +1,431 @@
+/* Gamification Styles - Achievements, Progress, Resources */
+
+/* Achievement Badge */
+.achievement-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(22, 33, 62, 0.6);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 2px solid var(--space-gold);
+    border-radius: 15px;
+    padding: 0.75rem 1.25rem;
+    margin: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.achievement-badge:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+}
+
+.achievement-badge.locked {
+    border-color: rgba(168, 178, 209, 0.3);
+    opacity: 0.5;
+    filter: grayscale(1);
+    box-shadow: none;
+}
+
+.achievement-badge.unlocked {
+    animation: achievement-unlock 0.8s ease-out;
+}
+
+@keyframes achievement-unlock {
+    0% {
+        transform: scale(0.5) rotate(-180deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.3) rotate(10deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.achievement-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6));
+}
+
+.achievement-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.achievement-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--space-gold);
+}
+
+.achievement-description {
+    font-size: 0.85rem;
+    color: var(--color-gray);
+}
+
+/* Achievements Container */
+.achievements-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    background: rgba(10, 10, 46, 0.4);
+    border-radius: 20px;
+    margin: 2rem 0;
+}
+
+/* Resource Indicators */
+.resource-panel {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(22, 33, 62, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid rgba(76, 201, 240, 0.3);
+    border-radius: 20px;
+    margin: 1rem 0;
+}
+
+.resource-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 120px;
+}
+
+.resource-icon {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 0 10px rgba(76, 201, 240, 0.6));
+}
+
+.resource-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    color: var(--color-light-blue);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.resource-bar {
+    width: 100%;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(76, 201, 240, 0.3);
+    position: relative;
+}
+
+.resource-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 10px;
+    transition: width 0.5s ease, background 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.resource-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: resource-shimmer 2s infinite;
+}
+
+@keyframes resource-shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+.resource-bar-fill.low {
+    background: linear-gradient(90deg, var(--neon-pink), var(--color-orange));
+    box-shadow: 0 0 15px rgba(255, 0, 191, 0.6);
+    animation: resource-warning 1s ease-in-out infinite;
+}
+
+@keyframes resource-warning {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.resource-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin-top: 0.25rem;
+}
+
+/* Mission Cards */
+.mission-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.mission-card {
+    background: rgba(22, 33, 62, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid rgba(76, 201, 240, 0.3);
+    border-radius: 25px;
+    padding: 2rem;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    position: relative;
+    overflow: hidden;
+}
+
+.mission-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        var(--neon-cyan),
+        transparent 180deg
+    );
+    animation: mission-card-rotate 4s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.mission-card:hover::before {
+    opacity: 0.2;
+}
+
+@keyframes mission-card-rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.mission-card::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    background: rgba(10, 10, 46, 0.8);
+    border-radius: 23px;
+    z-index: 1;
+}
+
+.mission-card-content {
+    position: relative;
+    z-index: 2;
+}
+
+.mission-card:hover {
+    transform: translateY(-15px) scale(1.05);
+    border-color: var(--neon-cyan);
+    box-shadow: 
+        0 25px 50px rgba(76, 201, 240, 0.4),
+        inset 0 0 30px rgba(0, 240, 255, 0.1);
+}
+
+.mission-icon {
+    font-size: 4rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.8));
+}
+
+.mission-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--neon-cyan);
+    margin-bottom: 1rem;
+}
+
+.mission-subtitle {
+    text-align: center;
+    color: var(--color-gray);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.mission-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+}
+
+.mission-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: rgba(22, 33, 62, 0.6);
+    border-radius: 10px;
+    border: 1px solid rgba(76, 201, 240, 0.2);
+}
+
+.mission-stat-label {
+    font-size: 0.9rem;
+    color: var(--color-gray);
+}
+
+.mission-stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--color-light-blue);
+}
+
+.difficulty-easy {
+    color: #00ff00;
+}
+
+.difficulty-medium {
+    color: var(--space-gold);
+}
+
+.difficulty-hard {
+    color: var(--neon-pink);
+}
+
+/* Progress Stats */
+.progress-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.stat-card {
+    background: rgba(22, 33, 62, 0.4);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 2px solid rgba(76, 201, 240, 0.3);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 10px 30px rgba(0, 240, 255, 0.3);
+    transform: translateY(-5px);
+}
+
+.stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 1rem;
+    color: var(--color-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Level/XP System */
+.level-indicator {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(22, 33, 62, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid var(--space-gold);
+    border-radius: 50px;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.level-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--space-gold);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+.xp-bar {
+    flex: 1;
+    height: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--space-gold), var(--neon-purple));
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+}
+
+.xp-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    color: var(--space-gold);
+    white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .resource-panel {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .mission-cards-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .progress-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .achievements-container {
+        padding: 1rem;
+    }
+    
+    .achievement-badge {
+        width: 100%;
+        justify-content: center;
+    }
+}
