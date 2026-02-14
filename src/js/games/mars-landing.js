@@ -575,35 +575,59 @@ class MarsLandingGame {
         
         const gradeDisplay = success ? `<div class="grade-display grade-${grade}">${grade}</div>` : '';
         
-        resultDiv.innerHTML = `
-            <div class="game-result ${success ? 'success' : 'failure'}">
-                <h2>${success ? '✅ Миссия выполнена!' : '❌ Миссия провалена'}</h2>
-                ${gradeDisplay}
-                <p class="result-message">${message}</p>
-                <div class="result-buttons">
-                    <button class="btn btn-secondary btn-large" id="game-restart-btn">🔄 Попробовать снова (R)</button>
-                    <button class="btn btn-primary btn-large" id="game-continue-btn">Продолжить</button>
-                </div>
-            </div>
-        `;
+        // Create result container
+        const resultContainer = document.createElement('div');
+        resultContainer.className = `game-result ${success ? 'success' : 'failure'}`;
         
+        // Create heading
+        const heading = document.createElement('h2');
+        heading.textContent = success ? '✅ Миссия выполнена!' : '❌ Миссия провалена';
+        resultContainer.appendChild(heading);
+        
+        // Add grade display if success
+        if (gradeDisplay) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = gradeDisplay;
+            resultContainer.appendChild(tempDiv.firstChild);
+        }
+        
+        // Create message paragraph (safely set text content, not innerHTML)
+        const messagePara = document.createElement('p');
+        messagePara.className = 'result-message';
+        messagePara.textContent = message;
+        resultContainer.appendChild(messagePara);
+        
+        // Create buttons container
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'result-buttons';
+        
+        const restartBtn = document.createElement('button');
+        restartBtn.className = 'btn btn-secondary btn-large';
+        restartBtn.id = 'game-restart-btn';
+        restartBtn.textContent = '🔄 Попробовать снова (R)';
+        
+        const continueBtn = document.createElement('button');
+        continueBtn.className = 'btn btn-primary btn-large';
+        continueBtn.id = 'game-continue-btn';
+        continueBtn.textContent = 'Продолжить';
+        
+        buttonsDiv.appendChild(restartBtn);
+        buttonsDiv.appendChild(continueBtn);
+        resultContainer.appendChild(buttonsDiv);
+        
+        resultDiv.appendChild(resultContainer);
         this.container.appendChild(resultDiv);
         
-        const continueBtn = document.getElementById('game-continue-btn');
-        if (continueBtn) {
-            continueBtn.addEventListener('click', () => {
-                if (this.callback) {
-                    this.callback(success, score);
-                }
-            });
-        }
+        // Add event listeners
+        restartBtn.addEventListener('click', () => {
+            this.restart();
+        });
         
-        const restartBtn = document.getElementById('game-restart-btn');
-        if (restartBtn) {
-            restartBtn.addEventListener('click', () => {
-                this.restart();
-            });
-        }
+        continueBtn.addEventListener('click', () => {
+            if (this.callback) {
+                this.callback(success, score);
+            }
+        });
     }
 }
 
@@ -891,7 +915,7 @@ marsLandingStyles.textContent = `
     
     @media (max-width: 768px) {
         .game-header {
-            flex-direction: row;
+            /* Keep row layout on mobile to allow horizontal wrapping of compact stats */
             justify-content: space-around;
         }
         
