@@ -89,6 +89,20 @@ class ResourceCollectorGame {
         this.gameLoop();
     }
     
+    destroy() {
+        this.gameActive = false;
+        
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
+        
+        // Clear container
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+    }
+    
     gameLoop() {
         if (!this.gameActive) return;
         

@@ -126,6 +126,25 @@ class AsteroidNavigatorGame {
         this.gameLoop();
     }
     
+    destroy() {
+        this.gameActive = false;
+        
+        if (this.animationFrame) {
+            cancelAnimationFrame(this.animationFrame);
+            this.animationFrame = null;
+        }
+        
+        // Remove event listeners
+        if (this.keydownHandler) {
+            document.removeEventListener('keydown', this.keydownHandler);
+        }
+        
+        // Clear container
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+    }
+    
     gameLoop() {
         if (!this.gameActive) return;
         

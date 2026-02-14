@@ -393,6 +393,25 @@ class CosmicLabApp {
         if (exitBtn) {
             exitBtn.addEventListener('click', () => this.exitGame());
         }
+
+        // Кнопка возврата в меню из мини-игр
+        const minigamesToMenuBtn = document.getElementById('minigames-to-menu');
+        if (minigamesToMenuBtn) {
+            minigamesToMenuBtn.addEventListener('click', () => {
+                this.backToMenu();
+                UI.switchScreen('minigames-screen', 'main-screen');
+            });
+        }
+
+        // Кнопка возврата в меню из игры
+        const gameToMenuBtn = document.getElementById('game-to-menu');
+        if (gameToMenuBtn) {
+            gameToMenuBtn.addEventListener('click', () => {
+                this.exitGame();
+                this.backToMenu();
+                UI.switchScreen('game-container-screen', 'main-screen');
+            });
+        }
     }
 
     // Загрузка статистики

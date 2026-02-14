@@ -176,14 +176,20 @@
                 </div>
             </div>
             
-            <button class="btn btn-secondary" id="back-from-minigames">← Назад к карте</button>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn btn-secondary" id="back-from-minigames">← Назад к карте</button>
+                <button class="btn btn-secondary" id="minigames-to-menu">🏠 В главное меню</button>
+            </div>
         </div>
     </div>
 
     <!-- Контейнер для запущенной игры -->
     <div id="game-container-screen" class="screen">
         <div id="game-canvas-wrapper"></div>
-        <button class="btn btn-secondary" id="exit-game">❌ Выход</button>
+        <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 9999;">
+            <button class="btn btn-secondary" id="exit-game">❌ Выход</button>
+            <button class="btn btn-secondary" id="game-to-menu">🏠 Меню</button>
+        </div>
     </div>
 
     <!-- Модуль брифинга миссии -->
