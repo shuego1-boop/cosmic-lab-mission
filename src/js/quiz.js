@@ -105,6 +105,11 @@ const Quiz = {
             const completed = totalScore >= (maxScore * 0.6); // 60% is pass
             window.gameProgress.updateMissionStats(completed, totalScore);
             
+            // Check for perfect score achievement
+            if (totalScore >= maxScore) {
+                window.gameProgress.unlockAchievement('quiz_perfect');
+            }
+            
             // Display achievements
             setTimeout(() => {
                 window.gameProgress.displayAchievements('achievements-container');

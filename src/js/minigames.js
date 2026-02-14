@@ -1,5 +1,10 @@
 // Mini-games for missions
 
+// Configuration
+const MINIGAME_CONFIG = {
+    sampleTypes: ['🪨', '💎', '🔬', '⚗️', '🧪']
+};
+
 const MiniGames = {
     // Dodge Meteors mini-game
     dodgeMeteors: {
@@ -231,7 +236,6 @@ const MiniGames = {
             }, 1000);
             
             // Spawn samples
-            const samples = ['🪨', '💎', '🔬', '⚗️', '🧪'];
             for (let i = 0; i < totalSamples; i++) {
                 setTimeout(() => {
                     if (!gameActive) return;
@@ -249,7 +253,7 @@ const MiniGames = {
                         animation: sample-glow 2s ease-in-out infinite;
                         transition: all 0.3s;
                     `;
-                    sample.textContent = samples[i % samples.length];
+                    sample.textContent = MINIGAME_CONFIG.sampleTypes[i % MINIGAME_CONFIG.sampleTypes.length];
                     
                     sample.addEventListener('mouseenter', () => {
                         sample.style.transform = 'scale(1.3)';

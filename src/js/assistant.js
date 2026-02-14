@@ -2,7 +2,7 @@
 
 class CosmicAssistant {
     constructor() {
-        this.name = 'КОРА'; // Космический Робот-Ассистент
+        this.assistantName = 'КОРА'; // Космический Робот-Ассистент
         this.messages = {
             welcome: [
                 'Добро пожаловать на борт, командир! Я КОРА - ваш космический ассистент.',

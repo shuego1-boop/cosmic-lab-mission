@@ -201,8 +201,8 @@ class GameProgress {
         `).join('');
     }
     
-    // Update mission stats
-    updateMissionStats(completed = false, score = 0, planetExplored = null) {
+        // Update mission stats
+        updateMissionStats(completed = false, score = 0, planetExplored = null) {
         this.missionStats.totalMissions++;
         if (completed) {
             this.missionStats.completedMissions++;
@@ -215,10 +215,9 @@ class GameProgress {
                 this.unlockAchievement('mars_pioneer');
             }
             
-            // Check for quiz perfect
-            if (score >= 100) {
-                this.unlockAchievement('quiz_perfect');
-            }
+            // Check for quiz perfect - score should be compared to maxScore
+            // Perfect score is when totalScore equals or exceeds the maximum possible
+            // This is checked in quiz.js where we have access to maxScore
         }
         
         if (planetExplored && !this.missionStats.planetsExplored.includes(planetExplored)) {
