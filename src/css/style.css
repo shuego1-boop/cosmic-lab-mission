@@ -52,6 +52,11 @@ body {
     height: 100%;
     z-index: -1;
     background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+    pointer-events: none; /* v5 hotfix: prevent background from stealing clicks */
+}
+
+.stars-background * {
+    pointer-events: none;
 }
 
 /* Контейнер */
