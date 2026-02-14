@@ -190,6 +190,14 @@ class CosmicLabApp {
             this.clearComparison();
         });
         
+        // Кнопка сравнения планет
+        const compareBtn = document.getElementById('compare-planets-btn');
+        compareBtn.addEventListener('click', () => {
+            if (this.selectedPlanetsForComparison.length >= 2) {
+                UI.showComparison(this.selectedPlanetsForComparison);
+            }
+        });
+        
         // Обработчик удаления планет из сравнения (делегирование)
         const selectedPlanets = document.getElementById('selected-planets');
         selectedPlanets.addEventListener('click', (e) => {
@@ -207,6 +215,14 @@ class CosmicLabApp {
         });
     }
 
+    // Обновление видимости кнопки сравнения
+    updateCompareButtonVisibility() {
+        const compareBtn = document.getElementById('compare-planets-btn');
+        if (compareBtn) {
+            compareBtn.style.display = this.selectedPlanetsForComparison.length >= 2 ? 'block' : 'none';
+        }
+    }
+
     // Добавление планеты в сравнение
     addPlanetToComparison(planetId, planetData) {
         if (UI.addToComparison(planetId, planetData, this.selectedPlanetsForComparison)) {
@@ -218,10 +234,7 @@ class CosmicLabApp {
                 card.classList.add('selected');
             }
             
-            // Если выбрано 2+ планеты, показываем подсказку
-            if (this.selectedPlanetsForComparison.length >= 2) {
-                console.log('Совет: двойной клик на панели сравнения покажет детальное сравнение');
-            }
+            this.updateCompareButtonVisibility();
         }
     }
 
@@ -239,6 +252,8 @@ class CosmicLabApp {
         if (card) {
             card.classList.remove('selected');
         }
+        
+        this.updateCompareButtonVisibility();
     }
 
     // Очистка сравнения
@@ -254,6 +269,8 @@ class CosmicLabApp {
         });
         
         this.selectedPlanetsForComparison = [];
+        
+        this.updateCompareButtonVisibility();
     }
 
     // Настройка экрана брифинга
@@ -436,9 +453,16 @@ class CosmicLabApp {
 
     // Запуск мини-игры
     startMinigame(gameType) {
+        console.log('🎮 Starting game:', gameType);
+        
         UI.switchScreen('minigames-screen', 'game-container-screen');
         
         const wrapper = document.getElementById('game-canvas-wrapper');
+        if (!wrapper) {
+            console.error('❌ Game wrapper not found!');
+            return;
+        }
+        
         wrapper.innerHTML = '';
 
         const onGameComplete = (success, score) => {
@@ -448,22 +472,31 @@ class CosmicLabApp {
         switch(gameType) {
             case 'mars-landing':
                 if (window.MarsLandingGame) {
+                    console.log('✅ MarsLandingGame found');
                     this.currentGame = new MarsLandingGame(wrapper, onGameComplete);
                     this.currentGame.init();
+                } else {
+                    console.error('❌ MarsLandingGame not loaded!');
                 }
                 break;
             
             case 'asteroid-navigator':
                 if (window.AsteroidNavigatorGame) {
+                    console.log('✅ AsteroidNavigatorGame found');
                     this.currentGame = new AsteroidNavigatorGame(wrapper, onGameComplete);
                     this.currentGame.init();
+                } else {
+                    console.error('❌ AsteroidNavigatorGame not loaded!');
                 }
                 break;
             
             case 'resource-collector':
                 if (window.ResourceCollectorGame) {
+                    console.log('✅ ResourceCollectorGame found');
                     this.currentGame = new ResourceCollectorGame(wrapper, onGameComplete);
                     this.currentGame.init();
+                } else {
+                    console.error('❌ ResourceCollectorGame not loaded!');
                 }
                 break;
         }
