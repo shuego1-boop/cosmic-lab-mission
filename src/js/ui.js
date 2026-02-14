@@ -39,6 +39,9 @@ const UI = {
             <div class="planet-icon">${planetData.icon}</div>
             <div class="planet-name">${planetData.name}</div>
             <div class="planet-subtitle">${planetData.type}</div>
+            <button class="planet-compare-btn" data-planet="${planetId}" title="Добавить в сравнение">
+                <span class="compare-icon">⚖️</span>
+            </button>
         `;
         
         return card;
