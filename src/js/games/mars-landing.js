@@ -2,9 +2,6 @@
 
 class MarsLandingGame {
     constructor(containerElement, callback) {
-        // Version marker
-        console.log('🚀 mars-landing v2 loaded');
-        
         this.container = typeof containerElement === 'string' 
             ? document.getElementById(containerElement) 
             : containerElement;
@@ -20,6 +17,12 @@ class MarsLandingGame {
         this.VY_SAFE = 5.0; // m/s (max safe vertical velocity)
         this.VX_SAFE = 3.0; // m/s (max safe horizontal velocity)
         this.ANGLE_SAFE = 15; // degrees (max safe angle)
+        
+        // Grading thresholds
+        this.GRADE_S_THRESHOLD = 95;
+        this.GRADE_A_THRESHOLD = 85;
+        this.GRADE_B_THRESHOLD = 70;
+        this.GRADE_C_THRESHOLD = 50;
         
         // Game state
         this.altitude = 500; // meters (starts high)
@@ -52,6 +55,11 @@ class MarsLandingGame {
         
         // Particles
         this.particles = [];
+        
+        // Version marker (only in development/debug)
+        if (typeof DEBUG !== 'undefined' && DEBUG) {
+            console.log('🚀 mars-landing v2 loaded');
+        }
     }
     
     init() {
@@ -289,7 +297,8 @@ class MarsLandingGame {
     }
     
     update(deltaTime) {
-        // Cap deltaTime to prevent huge jumps
+        // Cap deltaTime to prevent huge jumps (0.1s = max ~10 FPS before physics becomes unstable)
+        // This prevents spiral of death where slow frame causes large dt, which causes slower next frame
         deltaTime = Math.min(deltaTime, 0.1);
         
         // Apply main thrust (reduces velocity = slows fall or goes up)
@@ -537,11 +546,11 @@ class MarsLandingGame {
             
             score = Math.round(softnessScore + precisionScore + fuelScore);
             
-            // Assign grade
-            if (score >= 95) grade = 'S';
-            else if (score >= 85) grade = 'A';
-            else if (score >= 70) grade = 'B';
-            else if (score >= 50) grade = 'C';
+            // Assign grade based on predefined thresholds
+            if (score >= this.GRADE_S_THRESHOLD) grade = 'S';
+            else if (score >= this.GRADE_A_THRESHOLD) grade = 'A';
+            else if (score >= this.GRADE_B_THRESHOLD) grade = 'B';
+            else if (score >= this.GRADE_C_THRESHOLD) grade = 'C';
             else grade = 'D';
             
             message = `🎉 Успешная посадка!\n\nОценка: ${grade}\nОчки: ${score}\n\n✓ Верт. скорость: ${landingVelocityY.toFixed(1)} м/с\n✓ Гориз. скорость: ${landingVelocityX.toFixed(1)} м/с\n✓ Угол: ${landingAngle.toFixed(0)}°\n✓ Топливо: ${Math.round(this.fuel)}%`;
