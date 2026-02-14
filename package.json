@@ -6,7 +6,9 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "build:win": "electron-builder --win"
+    "build:win": "electron-builder --win",
+    "validate": "node validate.js",
+    "show-data": "node show-data.js"
   },
   "keywords": [
     "education",
