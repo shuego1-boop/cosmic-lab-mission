@@ -5,6 +5,7 @@ class CosmicLabApp {
         this.difficulty = null;
         this.selectedPlanetsForComparison = [];
         this.currentMission = null;
+        this.currentGame = null;
         this.init();
     }
 
@@ -23,6 +24,10 @@ class CosmicLabApp {
         
         // Обработчики результатов
         this.setupResultsScreen();
+        
+        // Обработчики мини-игр
+        this.setupMinigamesScreen();
+        this.loadMinigameStats();
         
         // Unlock first launch achievement
         if (window.gameProgress) {
@@ -350,6 +355,135 @@ class CosmicLabApp {
         
         // Переход к главному экрану
         UI.switchScreen('final-screen', 'main-screen');
+    }
+
+    // Настройка экрана мини-игр
+    setupMinigamesScreen() {
+        const goToMinigamesBtn = document.getElementById('go-to-minigames');
+        if (goToMinigamesBtn) {
+            goToMinigamesBtn.addEventListener('click', () => {
+                UI.switchScreen('solar-system-screen', 'minigames-screen');
+                this.loadMinigameStats();
+            });
+        }
+
+        const backBtn = document.getElementById('back-from-minigames');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                UI.switchScreen('minigames-screen', 'solar-system-screen');
+            });
+        }
+
+        const marsBtn = document.getElementById('start-mars-landing');
+        if (marsBtn) {
+            marsBtn.addEventListener('click', () => this.startMinigame('mars-landing'));
+        }
+
+        const asteroidBtn = document.getElementById('start-asteroid-navigator');
+        if (asteroidBtn) {
+            asteroidBtn.addEventListener('click', () => this.startMinigame('asteroid-navigator'));
+        }
+
+        const resourceBtn = document.getElementById('start-resource-collector');
+        if (resourceBtn) {
+            resourceBtn.addEventListener('click', () => this.startMinigame('resource-collector'));
+        }
+
+        const exitBtn = document.getElementById('exit-game');
+        if (exitBtn) {
+            exitBtn.addEventListener('click', () => this.exitGame());
+        }
+    }
+
+    // Загрузка статистики
+    loadMinigameStats() {
+        const stats = JSON.parse(localStorage.getItem('minigameResults') || '{}');
+        
+        this.updateGameStats('mars', stats['mars-landing'] || []);
+        this.updateGameStats('asteroid', stats['asteroid-navigator'] || []);
+        this.updateGameStats('resource', stats['resource-collector'] || []);
+    }
+
+    updateGameStats(prefix, results) {
+        const played = results.length;
+        const bestScore = results.length > 0 ? Math.max(...results.map(r => r.score)) : 0;
+
+        const playedEl = document.getElementById(`${prefix}-played`);
+        const bestEl = document.getElementById(`${prefix}-best-score`);
+        
+        if (playedEl) playedEl.textContent = played;
+        if (bestEl) bestEl.textContent = bestScore > 0 ? bestScore : '-';
+    }
+
+    // Запуск мини-игры
+    startMinigame(gameType) {
+        UI.switchScreen('minigames-screen', 'game-container-screen');
+        
+        const wrapper = document.getElementById('game-canvas-wrapper');
+        wrapper.innerHTML = '';
+
+        const onGameComplete = (success, score) => {
+            this.onGameComplete(gameType, success, score);
+        };
+
+        switch(gameType) {
+            case 'mars-landing':
+                if (window.MarsLandingGame) {
+                    this.currentGame = new MarsLandingGame(wrapper, onGameComplete);
+                    this.currentGame.init();
+                }
+                break;
+            
+            case 'asteroid-navigator':
+                if (window.AsteroidNavigatorGame) {
+                    this.currentGame = new AsteroidNavigatorGame(wrapper, onGameComplete);
+                    this.currentGame.init();
+                }
+                break;
+            
+            case 'resource-collector':
+                if (window.ResourceCollectorGame) {
+                    this.currentGame = new ResourceCollectorGame(wrapper, onGameComplete);
+                    this.currentGame.init();
+                }
+                break;
+        }
+    }
+
+    // Выход из игры
+    exitGame() {
+        if (this.currentGame && this.currentGame.destroy) {
+            this.currentGame.destroy();
+        }
+        this.currentGame = null;
+        
+        const wrapper = document.getElementById('game-canvas-wrapper');
+        wrapper.innerHTML = '';
+        
+        UI.switchScreen('game-container-screen', 'minigames-screen');
+    }
+
+    // Завершение игры
+    onGameComplete(gameType, success, score) {
+        const message = success 
+            ? `✅ Успех! Счёт: ${score}` 
+            : `❌ Попробуйте ещё раз. Счёт: ${score}`;
+        
+        setTimeout(() => {
+            alert(`Игра завершена!\n${message}`);
+            
+            // Сохранить результат
+            const results = JSON.parse(localStorage.getItem('minigameResults') || '{}');
+            if (!results[gameType]) results[gameType] = [];
+            results[gameType].push({ 
+                success, 
+                score, 
+                date: new Date().toISOString() 
+            });
+            localStorage.setItem('minigameResults', JSON.stringify(results));
+            
+            this.exitGame();
+        }, 500);
     }
 }
 
