@@ -456,7 +456,12 @@ h1, h2, h3, h4 {
     border-radius: 15px;
     font-size: 1.1rem;
     line-height: 1.6;
-    animation: slideIn 0.3s ease-out;
+    opacity: 0;
+    transition: opacity 0.4s ease-in;
+}
+
+.feedback.show {
+    opacity: 1;
 }
 
 .feedback.correct {

@@ -66,6 +66,16 @@ const Quiz = {
         // Показываем обратную связь
         UI.showQuizFeedback(question, optionIndex, isCorrect);
         
+        // Assistant explanation for wrong answers
+        if (!isCorrect && window.cosmicAssistant) {
+            window.cosmicAssistant.explainQuizError(
+                question.question,
+                question.options[optionIndex],
+                question.options[question.correct],
+                question.explanation
+            );
+        }
+        
         // Автоматический переход к следующему вопросу или результатам
         setTimeout(() => {
             if (this.currentQuestion < this.questions.length - 1) {
@@ -119,6 +129,14 @@ const Quiz = {
             if (window.cosmicAssistant && completed) {
                 window.cosmicAssistant.say('success');
             }
+        }
+        
+        // Show progress tracking from assistant
+        if (window.cosmicAssistant) {
+            const correctAnswers = this.answers.filter(a => a.correct).length;
+            setTimeout(() => {
+                window.cosmicAssistant.showProgress(correctAnswers, this.questions.length);
+            }, 2000);
         }
     },
 
