@@ -39,7 +39,13 @@ minigames-screen (game selection with stats)
 game-container-screen (full-screen game mode)
     ↓ (game completes or click "❌ Выход")
 minigames-screen (updated stats)
+    ↓ (click "← Назад к карте" or "🏠 В главное меню")
+solar-system-screen OR main-screen
 ```
+
+**New Navigation Options (Added 2026-02-14)**:
+- From minigames screen: Can return to solar system map OR main menu
+- From game container: Can exit to minigames OR go directly to main menu
 
 ### Data Storage Format
 ```javascript
@@ -54,7 +60,7 @@ localStorage.minigameResults = {
 ```
 
 ### Game Constructor Pattern
-All games follow a consistent constructor pattern:
+All games follow a consistent constructor pattern and include proper cleanup:
 ```javascript
 class GameClass {
   constructor(containerElement, callback) {
@@ -63,6 +69,20 @@ class GameClass {
       ? document.getElementById(containerElement) 
       : containerElement;
     this.callback = callback;
+  }
+  
+  init() {
+    // Initialize and start the game
+  }
+  
+  destroy() {
+    // Cleanup: stop animations, remove event listeners, clear DOM
+    this.gameActive = false;
+    if (this.animationFrame) {
+      cancelAnimationFrame(this.animationFrame);
+    }
+    // Remove event listeners...
+    // Clear container...
   }
 }
 ```
@@ -77,7 +97,9 @@ class GameClass {
 - `#start-asteroid-navigator` - Launch asteroid navigator
 - `#start-resource-collector` - Launch resource collector
 - `#back-from-minigames` - Return to solar system
+- `#minigames-to-menu` - **NEW**: Return to main menu from minigames
 - `#exit-game` - Exit current game
+- `#game-to-menu` - **NEW**: Return to main menu from game
 - `#game-canvas-wrapper` - Container for game content
 
 ### JavaScript Methods Added to CosmicLabApp
@@ -128,17 +150,20 @@ Potential improvements for future iterations:
 
 ## Notes
 
-- Games maintain their own state and cleanup on exit
+- Games maintain their own state and cleanup on exit via `destroy()` method
+- **NEW**: Each game class now has a `destroy()` method for proper cleanup
+- **NEW**: Added navigation buttons for direct return to main menu
 - Statistics persist across application restarts
 - Games are responsive and work on different screen sizes
 - All games include keyboard and mouse controls
-- Exit button is always visible during gameplay
+- Exit button is always visible during gameplay (top-right, fixed position)
 
 ---
 
 **Integration Status**: ✅ Complete
-**Date Completed**: 2026-02-14
-**Files Changed**: 6
-**Lines Added**: ~2000
+**Last Updated**: 2026-02-14
+**Latest Changes**: Added destroy() methods and enhanced navigation
+**Files Changed**: 9 (5 in latest update)
+**Lines Added**: ~2100+
 **Security Issues**: 0
 **Breaking Changes**: 0
