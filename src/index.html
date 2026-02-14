@@ -66,6 +66,18 @@
         </div>
     </div>
 
+    <!-- Mission Selection Screen -->
+    <div id="mission-select-screen" class="screen">
+        <div class="container">
+            <h2 class="screen-title neon-text">Выберите миссию</h2>
+            <p class="subtitle">Каждая миссия имеет свои особенности и сложность</p>
+            
+            <div class="mission-cards-container" id="mission-cards-container">
+                <!-- Mission cards will be populated by JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- Интерактивная карта Солнечной системы -->
     <div id="solar-system-screen" class="screen">
         <div class="container">
@@ -119,6 +131,48 @@
                 <button class="btn btn-primary btn-large glow-btn" id="start-mission-stages">
                     Начать миссию 🚀
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Launch Countdown Screen -->
+    <div id="launch-screen" class="screen">
+        <div class="container">
+            <div class="launch-container">
+                <h2 class="screen-title neon-text">Запуск миссии</h2>
+                <div id="countdown-display" class="countdown-display">
+                    <div class="countdown-number">3</div>
+                </div>
+                <div class="resource-panel" id="resource-panel">
+                    <!-- Resources will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flight Animation Screen -->
+    <div id="flight-screen" class="screen">
+        <div class="container">
+            <h2 class="screen-title neon-text">В полете...</h2>
+            <div class="flight-display" id="flight-display">
+                <div class="spaceship-flight" id="spaceship-flight">
+                    <div class="spaceship">
+                        <div class="spaceship-body">
+                            <div class="spaceship-wing-left"></div>
+                            <div class="spaceship-wing-right"></div>
+                            <div class="spaceship-engine"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flight-objects" id="flight-objects">
+                    <!-- Flying objects (asteroids, etc.) will be added by JS -->
+                </div>
+            </div>
+            <div class="resource-panel" id="resource-panel-flight">
+                <!-- Resources during flight -->
+            </div>
+            <div class="flight-progress">
+                <p>Прогресс полета: <span id="flight-progress-percent">0</span>%</p>
             </div>
         </div>
     </div>
@@ -191,6 +245,7 @@
 
     <!-- Скрипты -->
     <script src="js/data.js"></script>
+    <script src="js/gamification.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/mission.js"></script>
     <script src="js/quiz.js"></script>
