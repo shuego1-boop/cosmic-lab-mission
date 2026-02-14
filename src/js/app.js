@@ -449,6 +449,14 @@ class CosmicLabApp {
         const minigamesScreen = document.getElementById('minigames-screen');
         if (minigamesScreen) {
             minigamesScreen.addEventListener('click', (e) => {
+                // Only handle delegation if the click wasn't on a button with an id
+                // (buttons with ids have direct listeners above)
+                const button = e.target.closest('button[id^="start-"]');
+                if (button) {
+                    // Direct listener will handle this, skip delegation
+                    return;
+                }
+                
                 // Check if click is on or inside an element with data-game attribute
                 const gameElement = e.target.closest('[data-game]');
                 if (gameElement && gameElement.dataset.game) {
