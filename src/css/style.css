@@ -794,3 +794,34 @@ h1, h2, h3, h4 {
         padding: 0.2rem 0.6rem;
     }
 }
+
+/* Game error message */
+.game-error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 2rem;
+    text-align: center;
+}
+
+.game-error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.game-error-title {
+    color: var(--color-light-blue);
+    margin-bottom: 1rem;
+}
+
+.game-error-message {
+    color: var(--color-gray);
+    max-width: 500px;
+    line-height: 1.6;
+}
+
+.game-error-button {
+    margin-top: 2rem;
+}

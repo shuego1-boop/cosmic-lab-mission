@@ -484,7 +484,7 @@ class CosmicLabApp {
         };
 
         let gameClass = null;
-        let gameName = '';
+        let gameName = 'Игра';
 
         switch(gameType) {
             case 'mars-landing':
@@ -500,6 +500,11 @@ class CosmicLabApp {
             case 'resource-collector':
                 gameClass = window.ResourceCollectorGame;
                 gameName = 'Сборщик ресурсов';
+                break;
+            
+            default:
+                console.error(`❌ Неизвестный тип игры: ${gameType}`);
+                gameName = 'Неизвестная игра';
                 break;
         }
 
@@ -525,11 +530,11 @@ class CosmicLabApp {
         const wrapper = document.getElementById('game-canvas-wrapper');
         if (wrapper) {
             wrapper.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 2rem; text-align: center;">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
-                    <h2 style="color: var(--color-light-blue); margin-bottom: 1rem;">${title}</h2>
-                    <p style="color: var(--color-gray); max-width: 500px; line-height: 1.6;">${message}</p>
-                    <button class="btn btn-primary glow-btn" style="margin-top: 2rem;" onclick="document.getElementById('exit-game').click()">
+                <div class="game-error-container">
+                    <div class="game-error-icon">⚠️</div>
+                    <h2 class="game-error-title">${title}</h2>
+                    <p class="game-error-message">${message}</p>
+                    <button class="btn btn-primary glow-btn game-error-button" onclick="document.getElementById('exit-game').click()">
                         Вернуться к играм
                     </button>
                 </div>
