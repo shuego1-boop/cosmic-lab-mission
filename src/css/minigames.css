@@ -28,6 +28,7 @@
     background: linear-gradient(135deg, rgba(76, 201, 240, 0.05), rgba(123, 44, 191, 0.05));
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none; /* v4 hotfix: prevent blocking clicks */
 }
 
 .minigame-card:hover {
@@ -38,6 +39,12 @@
 
 .minigame-card:hover::before {
     opacity: 1;
+}
+
+/* v4 hotfix: ensure inner content is above decorative layers */
+.minigame-card > * {
+    position: relative;
+    z-index: 1;
 }
 
 .minigame-icon {
@@ -63,6 +70,9 @@
 
 .minigame-card .btn {
     width: 100%;
+    position: relative; /* v4 hotfix: ensure button is above decorative layers */
+    z-index: 2;
+    pointer-events: auto;
 }
 
 .minigame-stats {
