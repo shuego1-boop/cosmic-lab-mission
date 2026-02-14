@@ -254,9 +254,7 @@ class CosmicAssistant {
     
     // Explain wrong quiz answer
     explainQuizError(question, selectedAnswer, correctAnswer, explanation) {
-        const message = `❌ Неверно! Правильный ответ: ${correctAnswer}. 
-        
-📚 ${explanation}`;
+        const message = `❌ Неверно! Правильный ответ: ${correctAnswer}. 📚 ${explanation}`;
         this.show(message, 10000);
     }
     
