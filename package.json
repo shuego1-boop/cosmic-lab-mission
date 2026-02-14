@@ -1,0 +1,44 @@
+{
+  "name": "cosmic-lab-mission",
+  "version": "1.0.0",
+  "description": "Космическая лаборатория — Миссия | Интерактивная обучающая игра по астрономии",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "validate": "node validate.js",
+    "show-data": "node show-data.js"
+  },
+  "keywords": [
+    "education",
+    "astronomy",
+    "interactive",
+    "electron"
+  ],
+  "author": "Cosmic Lab Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.cosmiclab.mission",
+    "productName": "Космическая Лаборатория",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/assets/icon.ico",
+      "uninstallerIcon": "src/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
