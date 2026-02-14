@@ -1,5 +1,18 @@
 /* Стили для экрана мини-игр */
 
+/* v5 hotfix: prevent ALL pseudo-elements from stealing clicks */
+.minigame-card::before,
+.minigame-card::after,
+.minigame-card *::before,
+.minigame-card *::after {
+  pointer-events: none !important;
+}
+
+.glow-btn::before,
+.glow-btn::after {
+  pointer-events: none !important;
+}
+
 .minigames-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

@@ -34,7 +34,7 @@ class CosmicLabApp {
             window.gameProgress.unlockAchievement('first_launch');
         }
         
-        console.log('🚀 Космическая лаборатория — Миссия загружена (Version 4)');
+        console.log('🚀 Cosmic Lab Mission v5 loaded');
     }
 
     // Настройка главного экрана
@@ -441,6 +441,21 @@ class CosmicLabApp {
                 this.exitGame();
                 this.backToMenu();
                 UI.switchScreen('game-container-screen', 'main-screen');
+            });
+        }
+
+        // v5 hotfix: Robust event delegation fallback for minigame clicks
+        // This ensures clicks work even if direct button listeners fail
+        const minigamesScreen = document.getElementById('minigames-screen');
+        if (minigamesScreen) {
+            minigamesScreen.addEventListener('click', (e) => {
+                // Check if click is on or inside an element with data-game attribute
+                const gameElement = e.target.closest('[data-game]');
+                if (gameElement && gameElement.dataset.game) {
+                    const gameType = gameElement.dataset.game;
+                    console.log('🎯 v5 delegation: Caught click for game:', gameType);
+                    this.startMinigame(gameType);
+                }
             });
         }
     }
