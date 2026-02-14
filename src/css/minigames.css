@@ -1,13 +1,23 @@
 /* Стили для экрана мини-игр */
 
-/* v5 hotfix: prevent ALL pseudo-elements from stealing clicks */
+/* v5 hotfix: prevent decorative pseudo-elements from stealing clicks */
+/* Target only the decorative card overlay, not interactive elements */
 .minigame-card::before,
-.minigame-card::after,
-.minigame-card *::before,
-.minigame-card *::after {
+.minigame-card::after {
   pointer-events: none !important;
 }
 
+/* Prevent pseudo-elements on non-button children from blocking clicks */
+.minigame-card > div::before,
+.minigame-card > div::after,
+.minigame-card h3::before,
+.minigame-card h3::after,
+.minigame-card p::before,
+.minigame-card p::after {
+  pointer-events: none !important;
+}
+
+/* Ensure glow-btn pseudo-elements don't block clicks */
 .glow-btn::before,
 .glow-btn::after {
   pointer-events: none !important;
