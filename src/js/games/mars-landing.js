@@ -1,41 +1,54 @@
-// Mars Landing Simulator - Full Physics Game
+// Mars Landing Simulator - Full Physics Game v2
 
 class MarsLandingGame {
     constructor(containerElement, callback) {
+        // Version marker
+        console.log('🚀 mars-landing v2 loaded');
+        
         this.container = typeof containerElement === 'string' 
             ? document.getElementById(containerElement) 
             : containerElement;
         this.callback = callback;
         
         // Physics constants
-        this.MARS_GRAVITY = 3.71; // m/s² (Mars gravity)
-        this.THRUST_POWER = 5.0;  // m/s² (upward acceleration when thrusting)
-        this.TILT_POWER = 2.0;    // m/s² (horizontal acceleration)
-        this.MAX_LANDING_VELOCITY = 5.0; // m/s (max safe landing speed)
+        this.MARS_GRAVITY = 3.71; // m/s² (Mars gravity - pulls down)
+        this.THRUST_POWER = 6.0;  // m/s² (upward acceleration when thrusting)
+        this.SIDE_THRUST_POWER = 3.0; // m/s² (horizontal acceleration)
+        this.ROTATION_SPEED = 90; // degrees/s
+        
+        // Safe landing thresholds
+        this.VY_SAFE = 5.0; // m/s (max safe vertical velocity)
+        this.VX_SAFE = 3.0; // m/s (max safe horizontal velocity)
+        this.ANGLE_SAFE = 15; // degrees (max safe angle)
         
         // Game state
-        this.altitude = 500; // meters
-        this.velocity = 0; // m/s (positive = falling, negative = rising)
+        this.altitude = 500; // meters (starts high)
+        this.velocity = 0; // m/s (positive = falling down, negative = rising up)
         this.horizontalVelocity = 0; // m/s
         this.horizontalPosition = 50; // percent (0-100)
         this.fuel = 100; // percentage
-        this.tilt = 0; // degrees (-30 to 30)
+        this.angle = 0; // degrees (-45 to 45, 0 = upright)
         
         // Control state
         this.isThrusting = false;
         this.isTiltingLeft = false;
         this.isTiltingRight = false;
+        this.isRotatingLeft = false;
+        this.isRotatingRight = false;
         
         // Animation
         this.gameActive = false;
         this.animationFrame = null;
         this.lastTime = null;
+        this.landingChecked = false; // Prevent double-fire
         
-        // Terrain
-        this.landingZones = [
-            { start: 30, end: 40, safe: true, label: 'Зона A' },
-            { start: 55, end: 70, safe: true, label: 'Зона B' }
-        ];
+        // Landing pad (single pad in center)
+        this.landingPad = { start: 40, end: 60, label: '🎯 Landing Pad' };
+        
+        // Wind (difficulty-based)
+        this.difficulty = 'normal'; // easy, normal, hard
+        this.windForce = 0;
+        this.windTimer = 0;
         
         // Particles
         this.particles = [];
@@ -58,8 +71,16 @@ class MarsLandingGame {
                         <span class="stat-value" id="altitude-display">500m</span>
                     </div>
                     <div class="game-stat">
-                        <span class="stat-label">Скорость:</span>
+                        <span class="stat-label">↓ Верт. скорость:</span>
                         <span class="stat-value" id="velocity-display">0.0m/s</span>
+                    </div>
+                    <div class="game-stat">
+                        <span class="stat-label">→ Гориз. скорость:</span>
+                        <span class="stat-value" id="hvelocity-display">0.0m/s</span>
+                    </div>
+                    <div class="game-stat">
+                        <span class="stat-label">Угол:</span>
+                        <span class="stat-value" id="angle-display">0°</span>
                     </div>
                     <div class="game-stat">
                         <span class="stat-label">Топливо:</span>
@@ -67,6 +88,10 @@ class MarsLandingGame {
                             <div class="fuel-fill" id="fuel-fill" style="width: 100%"></div>
                             <span class="fuel-percent" id="fuel-percent">100%</span>
                         </div>
+                    </div>
+                    <div class="game-stat">
+                        <span class="stat-label">Статус:</span>
+                        <span class="stat-value safety-indicator" id="safety-indicator">SAFE</span>
                     </div>
                 </div>
                 
@@ -76,25 +101,23 @@ class MarsLandingGame {
                         <div class="thruster-particles" id="thruster-particles"></div>
                     </div>
                     <div class="terrain" id="terrain">
-                        ${this.landingZones.map(zone => `
-                            <div class="landing-zone ${zone.safe ? 'safe' : 'danger'}" 
-                                 style="left: ${zone.start}%; width: ${zone.end - zone.start}%">
-                                <span class="zone-label">${zone.label}</span>
-                            </div>
-                        `).join('')}
+                        <div class="landing-zone safe" 
+                             style="left: ${this.landingPad.start}%; width: ${this.landingPad.end - this.landingPad.start}%">
+                            <span class="zone-label">${this.landingPad.label}</span>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="game-controls">
-                    <button class="game-btn tilt-btn" id="tilt-left-btn">◄ Влево</button>
-                    <button class="game-btn thrust-btn" id="thrust-btn">▲ Двигатель (Пробел)</button>
-                    <button class="game-btn tilt-btn" id="tilt-right-btn">Вправо ►</button>
+                    <button class="game-btn tilt-btn" id="tilt-left-btn">◄ Влево (A)</button>
+                    <button class="game-btn thrust-btn" id="thrust-btn">▲ Двигатель (W/Space)</button>
+                    <button class="game-btn tilt-btn" id="tilt-right-btn">Вправо (D) ►</button>
                 </div>
                 
                 <div class="game-instructions">
-                    <p>🎯 Цель: Мягко приземлиться в зеленой зоне</p>
-                    <p>⚠️ Скорость при посадке должна быть &lt; ${this.MAX_LANDING_VELOCITY} м/с</p>
-                    <p>⌨️ Управление: Стрелки (лево/право), Пробел (тяга)</p>
+                    <p>🎯 Цель: Мягко приземлиться в зеленой зоне посадки</p>
+                    <p>⚠️ Безопасно: Верт. &lt;${this.VY_SAFE}м/с, Гориз. &lt;${this.VX_SAFE}м/с, Угол &lt;${this.ANGLE_SAFE}°</p>
+                    <p>⌨️ Управление: W/Space (тяга) • A/D или ◄/► (боковые двигатели) • Q/E (поворот) • R (рестарт)</p>
                 </div>
             </div>
         `;
@@ -150,33 +173,78 @@ class MarsLandingGame {
         
         // Keyboard controls
         this.keydownHandler = (e) => {
-            if (e.code === 'Space') {
+            if (e.code === 'Space' || e.code === 'KeyW') {
                 e.preventDefault();
                 this.isThrusting = true;
-            } else if (e.code === 'ArrowLeft') {
+            } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
                 e.preventDefault();
                 this.isTiltingLeft = true;
-            } else if (e.code === 'ArrowRight') {
+            } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
                 e.preventDefault();
                 this.isTiltingRight = true;
+            } else if (e.code === 'KeyQ') {
+                e.preventDefault();
+                this.isRotatingLeft = true;
+            } else if (e.code === 'KeyE') {
+                e.preventDefault();
+                this.isRotatingRight = true;
+            } else if (e.code === 'KeyR') {
+                e.preventDefault();
+                this.restart();
             }
         };
         
         this.keyupHandler = (e) => {
-            if (e.code === 'Space') {
+            if (e.code === 'Space' || e.code === 'KeyW') {
                 e.preventDefault();
                 this.isThrusting = false;
-            } else if (e.code === 'ArrowLeft') {
+            } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
                 e.preventDefault();
                 this.isTiltingLeft = false;
-            } else if (e.code === 'ArrowRight') {
+            } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
                 e.preventDefault();
                 this.isTiltingRight = false;
+            } else if (e.code === 'KeyQ') {
+                e.preventDefault();
+                this.isRotatingLeft = false;
+            } else if (e.code === 'KeyE') {
+                e.preventDefault();
+                this.isRotatingRight = false;
             }
         };
         
         document.addEventListener('keydown', this.keydownHandler);
         document.addEventListener('keyup', this.keyupHandler);
+    }
+    
+    restart() {
+        // Reset game state
+        this.altitude = 500;
+        this.velocity = 0;
+        this.horizontalVelocity = 0;
+        this.horizontalPosition = 50;
+        this.fuel = 100;
+        this.angle = 0;
+        this.isThrusting = false;
+        this.isTiltingLeft = false;
+        this.isTiltingRight = false;
+        this.isRotatingLeft = false;
+        this.isRotatingRight = false;
+        this.particles = [];
+        this.landingChecked = false;
+        this.windForce = 0;
+        this.windTimer = 0;
+        
+        // Remove any existing result overlay
+        const existingOverlay = this.container.querySelector('.game-result-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Restart game
+        this.gameActive = true;
+        this.lastTime = performance.now();
+        this.gameLoop();
     }
     
     start() {
@@ -221,7 +289,10 @@ class MarsLandingGame {
     }
     
     update(deltaTime) {
-        // Apply thrust
+        // Cap deltaTime to prevent huge jumps
+        deltaTime = Math.min(deltaTime, 0.1);
+        
+        // Apply main thrust (reduces velocity = slows fall or goes up)
         if (this.isThrusting && this.fuel > 0) {
             this.velocity -= this.THRUST_POWER * deltaTime;
             this.fuel -= 10 * deltaTime; // Consume fuel
@@ -229,20 +300,47 @@ class MarsLandingGame {
             this.createThrusterParticles();
         }
         
-        // Apply tilt
-        if (this.isTiltingLeft) {
-            this.tilt = Math.max(-30, this.tilt - 60 * deltaTime);
-            this.horizontalVelocity -= this.TILT_POWER * deltaTime;
-        } else if (this.isTiltingRight) {
-            this.tilt = Math.min(30, this.tilt + 60 * deltaTime);
-            this.horizontalVelocity += this.TILT_POWER * deltaTime;
-        } else {
-            // Return to center
-            this.tilt *= 0.95;
+        // Apply side thrusters (horizontal movement)
+        if (this.isTiltingLeft && this.fuel > 0) {
+            this.horizontalVelocity -= this.SIDE_THRUST_POWER * deltaTime;
+            this.fuel -= 3 * deltaTime;
+            this.fuel = Math.max(0, this.fuel);
+        }
+        if (this.isTiltingRight && this.fuel > 0) {
+            this.horizontalVelocity += this.SIDE_THRUST_POWER * deltaTime;
+            this.fuel -= 3 * deltaTime;
+            this.fuel = Math.max(0, this.fuel);
         }
         
-        // Apply Mars gravity
+        // Apply rotation
+        if (this.isRotatingLeft) {
+            this.angle = Math.max(-45, this.angle - this.ROTATION_SPEED * deltaTime);
+        }
+        if (this.isRotatingRight) {
+            this.angle = Math.min(45, this.angle + this.ROTATION_SPEED * deltaTime);
+        }
+        
+        // Auto-stabilize angle slightly when not rotating
+        if (!this.isRotatingLeft && !this.isRotatingRight) {
+            this.angle *= 0.98;
+        }
+        
+        // Apply Mars gravity (increases velocity = speeds up fall)
         this.velocity += this.MARS_GRAVITY * deltaTime;
+        
+        // Apply wind (on normal/hard difficulty)
+        if (this.difficulty !== 'easy') {
+            this.windTimer += deltaTime;
+            if (this.windTimer > 2) { // Change wind every 2 seconds
+                this.windTimer = 0;
+                const windStrength = this.difficulty === 'hard' ? 0.8 : 0.4;
+                this.windForce = (Math.random() - 0.5) * windStrength;
+            }
+            this.horizontalVelocity += this.windForce * deltaTime;
+        }
+        
+        // Apply horizontal damping (air resistance)
+        this.horizontalVelocity *= 0.99;
         
         // Update position
         this.altitude -= this.velocity * deltaTime;
@@ -254,9 +352,10 @@ class MarsLandingGame {
         // Update particles
         this.updateParticles(deltaTime);
         
-        // Check landing/crash
-        if (this.altitude <= 0) {
+        // Check landing/crash (only once)
+        if (this.altitude <= 0 && !this.landingChecked) {
             this.altitude = 0;
+            this.landingChecked = true;
             this.checkLanding();
         }
     }
@@ -265,8 +364,11 @@ class MarsLandingGame {
         // Update displays
         const altitudeDisplay = document.getElementById('altitude-display');
         const velocityDisplay = document.getElementById('velocity-display');
+        const hvelocityDisplay = document.getElementById('hvelocity-display');
+        const angleDisplay = document.getElementById('angle-display');
         const fuelFill = document.getElementById('fuel-fill');
         const fuelPercent = document.getElementById('fuel-percent');
+        const safetyIndicator = document.getElementById('safety-indicator');
         const lander = document.getElementById('lander');
         
         if (altitudeDisplay) {
@@ -276,7 +378,19 @@ class MarsLandingGame {
         if (velocityDisplay) {
             const absVelocity = Math.abs(this.velocity);
             velocityDisplay.textContent = `${absVelocity.toFixed(1)}m/s`;
-            velocityDisplay.style.color = absVelocity > this.MAX_LANDING_VELOCITY ? '#ff0000' : '#00ff00';
+            velocityDisplay.style.color = absVelocity > this.VY_SAFE ? '#ff0000' : '#00ff00';
+        }
+        
+        if (hvelocityDisplay) {
+            const absHVelocity = Math.abs(this.horizontalVelocity);
+            hvelocityDisplay.textContent = `${absHVelocity.toFixed(1)}m/s`;
+            hvelocityDisplay.style.color = absHVelocity > this.VX_SAFE ? '#ff0000' : '#00ff00';
+        }
+        
+        if (angleDisplay) {
+            const absAngle = Math.abs(this.angle);
+            angleDisplay.textContent = `${absAngle.toFixed(0)}°`;
+            angleDisplay.style.color = absAngle > this.ANGLE_SAFE ? '#ff0000' : '#00ff00';
         }
         
         if (fuelFill) {
@@ -288,13 +402,24 @@ class MarsLandingGame {
             fuelPercent.textContent = `${Math.round(this.fuel)}%`;
         }
         
-        // Update lander position and rotation
+        // Safety indicator
+        if (safetyIndicator) {
+            const isSafe = Math.abs(this.velocity) < this.VY_SAFE && 
+                          Math.abs(this.horizontalVelocity) < this.VX_SAFE && 
+                          Math.abs(this.angle) < this.ANGLE_SAFE;
+            safetyIndicator.textContent = isSafe ? 'SAFE ✓' : 'RISK ⚠';
+            safetyIndicator.style.color = isSafe ? '#00ff00' : '#ff0000';
+        }
+        
+        // Update lander position (FIXED: was inverted before)
         if (lander) {
-            const canvasHeight = 400; // Height of game canvas
-            const verticalPercent = Math.max(0, Math.min(100, (1 - this.altitude / 500) * 100));
+            // altitude goes from 500 (top) to 0 (bottom)
+            // We want: altitude 500 -> top of canvas (100% from bottom)
+            //          altitude 0 -> bottom of canvas (0% from bottom)
+            const verticalPercent = (this.altitude / 500) * 100;
             lander.style.bottom = `${verticalPercent}%`;
             lander.style.left = `${this.horizontalPosition}%`;
-            lander.style.transform = `translate(-50%, 0) rotate(${this.tilt}deg)`;
+            lander.style.transform = `translate(-50%, 0) rotate(${this.angle}deg)`;
         }
         
         // Render particles
@@ -334,8 +459,8 @@ class MarsLandingGame {
         
         container.innerHTML = this.particles.map(p => {
             const opacity = p.life / p.maxLife;
-            const canvasHeight = 400;
-            const verticalPercent = Math.max(0, Math.min(100, (1 - p.y / 500) * 100));
+            // Use same coordinate system as lander
+            const verticalPercent = (p.y / 500) * 100;
             
             return `<div class="particle" style="
                 position: absolute;
@@ -361,40 +486,95 @@ class MarsLandingGame {
         document.removeEventListener('keydown', this.keydownHandler);
         document.removeEventListener('keyup', this.keyupHandler);
         
-        const landingVelocity = Math.abs(this.velocity);
-        const inSafeZone = this.landingZones.some(zone => 
-            zone.safe && 
-            this.horizontalPosition >= zone.start && 
-            this.horizontalPosition <= zone.end
-        );
+        // Calculate landing parameters
+        const landingVelocityY = Math.abs(this.velocity);
+        const landingVelocityX = Math.abs(this.horizontalVelocity);
+        const landingAngle = Math.abs(this.angle);
         
-        const success = landingVelocity <= this.MAX_LANDING_VELOCITY && inSafeZone;
+        // Check if in landing pad
+        const inLandingPad = this.horizontalPosition >= this.landingPad.start && 
+                            this.horizontalPosition <= this.landingPad.end;
         
+        // Check if all parameters are safe
+        const velocityYSafe = landingVelocityY <= this.VY_SAFE;
+        const velocityXSafe = landingVelocityX <= this.VX_SAFE;
+        const angleSafe = landingAngle <= this.ANGLE_SAFE;
+        
+        const success = inLandingPad && velocityYSafe && velocityXSafe && angleSafe;
+        
+        // Build detailed message
         let message = '';
-        let score = 0;
+        let failureReasons = [];
         
-        if (success) {
-            score = Math.round((1 - landingVelocity / this.MAX_LANDING_VELOCITY) * 50 + this.fuel / 2);
-            message = `🎉 Успешная посадка! Скорость: ${landingVelocity.toFixed(1)} м/с. Счет: ${score}`;
-        } else if (!inSafeZone) {
-            message = `💥 Авария! Посадка вне безопасной зоны.`;
-        } else {
-            message = `💥 Слишком быстрая посадка! Скорость: ${landingVelocity.toFixed(1)} м/с (макс: ${this.MAX_LANDING_VELOCITY} м/с)`;
+        if (!inLandingPad) {
+            failureReasons.push('❌ Вне зоны посадки');
+        }
+        if (!velocityYSafe) {
+            failureReasons.push(`❌ Верт. скорость слишком большая: ${landingVelocityY.toFixed(1)} м/с (макс: ${this.VY_SAFE})`);
+        }
+        if (!velocityXSafe) {
+            failureReasons.push(`❌ Гориз. скорость слишком большая: ${landingVelocityX.toFixed(1)} м/с (макс: ${this.VX_SAFE})`);
+        }
+        if (!angleSafe) {
+            failureReasons.push(`❌ Угол слишком большой: ${landingAngle.toFixed(0)}° (макс: ${this.ANGLE_SAFE}°)`);
         }
         
-        this.showResult(success, message, score);
+        // Calculate score and grade
+        let score = 0;
+        let grade = 'F';
+        
+        if (success) {
+            // Score based on: softness (50), precision (30), fuel efficiency (20)
+            const softnessScore = ((this.VY_SAFE - landingVelocityY) / this.VY_SAFE) * 50;
+            
+            // Precision: distance from center of pad
+            const padCenter = (this.landingPad.start + this.landingPad.end) / 2;
+            const padWidth = this.landingPad.end - this.landingPad.start;
+            const distanceFromCenter = Math.abs(this.horizontalPosition - padCenter);
+            const precisionScore = (1 - (distanceFromCenter / (padWidth / 2))) * 30;
+            
+            const fuelScore = (this.fuel / 100) * 20;
+            
+            score = Math.round(softnessScore + precisionScore + fuelScore);
+            
+            // Assign grade
+            if (score >= 95) grade = 'S';
+            else if (score >= 85) grade = 'A';
+            else if (score >= 70) grade = 'B';
+            else if (score >= 50) grade = 'C';
+            else grade = 'D';
+            
+            message = `🎉 Успешная посадка!\n\nОценка: ${grade}\nОчки: ${score}\n\n✓ Верт. скорость: ${landingVelocityY.toFixed(1)} м/с\n✓ Гориз. скорость: ${landingVelocityX.toFixed(1)} м/с\n✓ Угол: ${landingAngle.toFixed(0)}°\n✓ Топливо: ${Math.round(this.fuel)}%`;
+        } else {
+            message = `💥 Авария при посадке!\n\n${failureReasons.join('\n')}`;
+        }
+        
+        this.showResult(success, message, score, grade);
     }
     
-    showResult(success, message, score) {
+    showResult(success, message, score, grade = 'F') {
         if (!this.container) return;
+        
+        // Remove any existing overlay first
+        const existingOverlay = this.container.querySelector('.game-result-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
         
         const resultDiv = document.createElement('div');
         resultDiv.className = 'game-result-overlay';
+        
+        const gradeDisplay = success ? `<div class="grade-display grade-${grade}">${grade}</div>` : '';
+        
         resultDiv.innerHTML = `
             <div class="game-result ${success ? 'success' : 'failure'}">
                 <h2>${success ? '✅ Миссия выполнена!' : '❌ Миссия провалена'}</h2>
-                <p>${message}</p>
-                <button class="btn btn-primary btn-large" id="game-continue-btn">Продолжить</button>
+                ${gradeDisplay}
+                <p class="result-message">${message}</p>
+                <div class="result-buttons">
+                    <button class="btn btn-secondary btn-large" id="game-restart-btn">🔄 Попробовать снова (R)</button>
+                    <button class="btn btn-primary btn-large" id="game-continue-btn">Продолжить</button>
+                </div>
             </div>
         `;
         
@@ -406,6 +586,13 @@ class MarsLandingGame {
                 if (this.callback) {
                     this.callback(success, score);
                 }
+            });
+        }
+        
+        const restartBtn = document.getElementById('game-restart-btn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.restart();
             });
         }
     }
@@ -426,25 +613,34 @@ marsLandingStyles.textContent = `
         display: flex;
         justify-content: space-between;
         margin-bottom: 1.5rem;
-        gap: 1rem;
+        gap: 0.5rem;
         flex-wrap: wrap;
     }
     
     .game-stat {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.3rem;
+        min-width: 100px;
     }
     
     .stat-label {
-        font-size: 0.9rem;
+        font-size: 0.75rem;
         color: var(--color-gray);
+        white-space: nowrap;
     }
     
     .stat-value {
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         color: var(--neon-cyan);
         font-weight: bold;
+        transition: color 0.3s;
+    }
+    
+    .safety-indicator {
+        font-size: 1rem;
+        font-weight: bold;
+        text-shadow: 0 0 10px currentColor;
     }
     
     .fuel-gauge {
@@ -642,10 +838,64 @@ marsLandingStyles.textContent = `
         color: var(--color-gray);
     }
     
+    .result-message {
+        white-space: pre-line;
+        line-height: 1.6;
+        text-align: left;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 10px;
+    }
+    
+    .result-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .grade-display {
+        font-size: 5rem;
+        font-weight: bold;
+        margin: 1rem 0;
+        text-shadow: 0 0 30px currentColor;
+        animation: gradeAppear 0.5s ease-out;
+    }
+    
+    .grade-S { color: #FFD700; }
+    .grade-A { color: #00FF00; }
+    .grade-B { color: #4CAF50; }
+    .grade-C { color: #FFA500; }
+    .grade-D { color: #FF6B6B; }
+    .grade-F { color: #FF0000; }
+    
+    @keyframes gradeAppear {
+        from {
+            transform: scale(0);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
     @media (max-width: 768px) {
         .game-header {
-            flex-direction: column;
-            align-items: center;
+            flex-direction: row;
+            justify-content: space-around;
+        }
+        
+        .game-stat {
+            min-width: 80px;
+        }
+        
+        .stat-label {
+            font-size: 0.65rem;
+        }
+        
+        .stat-value {
+            font-size: 1rem;
         }
         
         .game-canvas {
