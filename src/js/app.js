@@ -376,17 +376,17 @@ class CosmicLabApp {
 
         const marsBtn = document.getElementById('start-mars-landing');
         if (marsBtn) {
-            marsBtn.addEventListener('click', () => this.startGame('mars-landing'));
+            marsBtn.addEventListener('click', () => this.startMinigame('mars-landing'));
         }
 
         const asteroidBtn = document.getElementById('start-asteroid-navigator');
         if (asteroidBtn) {
-            asteroidBtn.addEventListener('click', () => this.startGame('asteroid-navigator'));
+            asteroidBtn.addEventListener('click', () => this.startMinigame('asteroid-navigator'));
         }
 
         const resourceBtn = document.getElementById('start-resource-collector');
         if (resourceBtn) {
-            resourceBtn.addEventListener('click', () => this.startGame('resource-collector'));
+            resourceBtn.addEventListener('click', () => this.startMinigame('resource-collector'));
         }
 
         const exitBtn = document.getElementById('exit-game');
@@ -415,8 +415,8 @@ class CosmicLabApp {
         if (bestEl) bestEl.textContent = bestScore > 0 ? bestScore : '-';
     }
 
-    // Запуск игры
-    startGame(gameType) {
+    // Запуск мини-игры
+    startMinigame(gameType) {
         UI.switchScreen('minigames-screen', 'game-container-screen');
         
         const wrapper = document.getElementById('game-canvas-wrapper');

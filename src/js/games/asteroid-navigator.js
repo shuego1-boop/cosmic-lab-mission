@@ -304,8 +304,7 @@ class AsteroidNavigatorGame {
     }
     
     showResult(success, finalScore, survivalTime) {
-        const container = document.getElementById(this.containerId);
-        if (!container) return;
+        if (!this.container) return;
         
         const resultDiv = document.createElement('div');
         resultDiv.className = 'game-result-overlay';
@@ -318,7 +317,7 @@ class AsteroidNavigatorGame {
             </div>
         `;
         
-        container.appendChild(resultDiv);
+        this.container.appendChild(resultDiv);
         
         const continueBtn = document.getElementById('game-continue-btn');
         if (continueBtn) {
