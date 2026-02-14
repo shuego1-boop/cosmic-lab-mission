@@ -111,8 +111,14 @@
 
             <div class="comparison-panel" id="comparison-panel">
                 <h3>Сравнить планеты</h3>
+                <p class="comparison-hint" style="color: var(--color-gray); font-size: 0.85rem; margin-bottom: 0.5rem;">
+                    💡 Двойной клик по планете добавит её сюда
+                </p>
                 <div class="selected-planets" id="selected-planets"></div>
-                <button class="btn btn-small" id="clear-comparison">Очистить</button>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <button class="btn btn-small" id="clear-comparison">Очистить</button>
+                    <button class="btn btn-small btn-primary" id="compare-planets-btn" style="display: none;">📊 Сравнить</button>
+                </div>
             </div>
         </div>
     </div>

@@ -4,7 +4,7 @@ const planetsData = {
     mercury: {
         id: 'mercury',
         name: 'Меркурий',
-        icon: '☿️',
+        icon: '🪨',
         type: 'Каменистая планета',
         mass: 0.055, // относительно Земли
         radius: 2439.7, // км
@@ -20,7 +20,7 @@ const planetsData = {
     venus: {
         id: 'venus',
         name: 'Венера',
-        icon: '♀️',
+        icon: '🌕',
         type: 'Каменистая планета',
         mass: 0.815,
         radius: 6051.8,
@@ -52,7 +52,7 @@ const planetsData = {
     mars: {
         id: 'mars',
         name: 'Марс',
-        icon: '♂️',
+        icon: '🔴',
         type: 'Каменистая планета',
         mass: 0.107,
         radius: 3389.5,
@@ -68,7 +68,7 @@ const planetsData = {
     jupiter: {
         id: 'jupiter',
         name: 'Юпитер',
-        icon: '♃',
+        icon: '🟠',
         type: 'Газовый гигант',
         mass: 317.8,
         radius: 69911,
@@ -84,7 +84,7 @@ const planetsData = {
     saturn: {
         id: 'saturn',
         name: 'Сатурн',
-        icon: '♄',
+        icon: '🪐',
         type: 'Газовый гигант',
         mass: 95.2,
         radius: 58232,
@@ -100,7 +100,7 @@ const planetsData = {
     uranus: {
         id: 'uranus',
         name: 'Уран',
-        icon: '♅',
+        icon: '🔵',
         type: 'Ледяной гигант',
         mass: 14.5,
         radius: 25362,
@@ -116,7 +116,7 @@ const planetsData = {
     neptune: {
         id: 'neptune',
         name: 'Нептун',
-        icon: '♆',
+        icon: '💙',
         type: 'Ледяной гигант',
         mass: 17.1,
         radius: 24622,
