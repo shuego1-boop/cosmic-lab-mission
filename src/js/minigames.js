@@ -6,7 +6,52 @@ const MINIGAME_CONFIG = {
 };
 
 const MiniGames = {
-    // Dodge Meteors mini-game
+    // New Mars Landing Simulator (replaces landing mini-game)
+    marsLanding: {
+        name: 'Посадка на Марс',
+        description: 'Посадите корабль с реалистичной физикой',
+        
+        init(containerId, callback) {
+            if (window.MarsLandingGame) {
+                const game = new MarsLandingGame(containerId, callback);
+                game.init();
+            } else {
+                console.error('MarsLandingGame not loaded');
+            }
+        }
+    },
+    
+    // New Asteroid Navigator (replaces dodge meteors)
+    asteroidNavigator: {
+        name: 'Навигатор астероидов',
+        description: 'Уклоняйтесь от астероидов и собирайте бонусы',
+        
+        init(containerId, callback) {
+            if (window.AsteroidNavigatorGame) {
+                const game = new AsteroidNavigatorGame(containerId, callback);
+                game.init();
+            } else {
+                console.error('AsteroidNavigatorGame not loaded');
+            }
+        }
+    },
+    
+    // New Resource Collector (replaces collect samples)
+    resourceCollector: {
+        name: 'Сбор ресурсов',
+        description: 'Собирайте научные ресурсы Марса',
+        
+        init(containerId, callback) {
+            if (window.ResourceCollectorGame) {
+                const game = new ResourceCollectorGame(containerId, callback);
+                game.init();
+            } else {
+                console.error('ResourceCollectorGame not loaded');
+            }
+        }
+    },
+    
+    // Legacy: Dodge Meteors mini-game (kept for compatibility)
     dodgeMeteors: {
         name: 'Избежать метеоритов',
         description: 'Кликайте по метеоритам, чтобы уничтожить их и защитить корабль!',
