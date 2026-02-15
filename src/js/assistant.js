@@ -69,6 +69,7 @@ class CosmicAssistant {
         this.currentContext = 'welcome';
         this.isVisible = true;
         this.element = null;
+        this.hideTimer = null;
         
         this.init();
     }
@@ -102,7 +103,9 @@ class CosmicAssistant {
         // Add event listeners
         const closeBtn = document.getElementById('assistant-close');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
+            closeBtn.addEventListener('click', () => {
+                this.show(this.getRandomMessage(this.currentContext), 0);
+            });
         }
         
         // Click on avatar to show/hide
@@ -119,8 +122,13 @@ class CosmicAssistant {
     }
     
     // Show assistant with message
-    show(message, duration = 5000) {
+    show(message, duration = 0) {
         if (!this.element) return;
+
+        if (this.hideTimer) {
+            clearTimeout(this.hideTimer);
+            this.hideTimer = null;
+        }
         
         const messageEl = document.getElementById('assistant-message');
         if (messageEl) {
@@ -132,25 +140,22 @@ class CosmicAssistant {
         
         // Auto-hide after duration
         if (duration > 0) {
-            setTimeout(() => this.hide(), duration);
+            this.hideTimer = setTimeout(() => this.hide(), duration);
         }
     }
     
     // Hide assistant
     hide() {
         if (!this.element) return;
-        
-        this.element.classList.remove('active');
-        this.isVisible = false;
+
+        // Pinned mode: assistant bubble stays visible by default
+        this.element.classList.add('active');
+        this.isVisible = true;
     }
     
     // Toggle visibility
     toggle() {
-        if (this.isVisible) {
-            this.hide();
-        } else {
-            this.show(this.getRandomMessage(this.currentContext));
-        }
+        this.show(this.getRandomMessage(this.currentContext), 0);
     }
     
     // Say something based on context
@@ -162,17 +167,17 @@ class CosmicAssistant {
     
     // Contextual hints
     hint(hintText) {
-        this.show(`💡 Подсказка: ${hintText}`, 7000);
+        this.show(`💡 Подсказка: ${hintText}`, 0);
     }
     
     // Warning messages
     warn(warningText) {
-        this.show(`⚠️ ${warningText}`, 6000);
+        this.show(`⚠️ ${warningText}`, 0);
     }
     
     // Celebration messages
     celebrate(celebrationText) {
-        this.show(`🎉 ${celebrationText}`, 5000);
+        this.show(`🎉 ${celebrationText}`, 0);
     }
     
     // Update context automatically based on screen

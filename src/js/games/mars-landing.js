@@ -1,946 +1,911 @@
-// Mars Landing Simulator - Full Physics Game v2
+// Mars Landing - Asteroid Run Edition (clean arcade rewrite)
+
+const RUN_CONFIG = {
+    gravity: 30,
+    thrust: 55,
+    horizontalSpeed: 14,
+    maxFallSpeed: 34,
+    maxRiseSpeed: -28,
+    tunnelMinGap: 32,
+    tunnelMaxGap: 44,
+    segmentWidth: 22,
+    spawnAhead: 7,
+    startFuel: 100,
+    fuelBurnPerSec: 12,
+    fuelRecoverPerSec: 8,
+    comboWindowSec: 2.6,
+    safeStartSegments: 10,
+    noCollisionDistance: 120,
+    trackRenderIntervalSec: 1 / 24,
+    perfectBaseScore: 12
+};
 
 class MarsLandingGame {
     constructor(containerElement, callback) {
-        this.container = typeof containerElement === 'string' 
-            ? document.getElementById(containerElement) 
+        this.container = typeof containerElement === 'string'
+            ? document.getElementById(containerElement)
             : containerElement;
         this.callback = callback;
-        
-        // Physics constants
-        this.MARS_GRAVITY = 3.71; // m/s² (Mars gravity - pulls down)
-        this.THRUST_POWER = 6.0;  // m/s² (upward acceleration when thrusting)
-        this.SIDE_THRUST_POWER = 3.0; // m/s² (horizontal acceleration)
-        this.ROTATION_SPEED = 90; // degrees/s
-        
-        // Safe landing thresholds
-        this.VY_SAFE = 5.0; // m/s (max safe vertical velocity)
-        this.VX_SAFE = 3.0; // m/s (max safe horizontal velocity)
-        this.ANGLE_SAFE = 15; // degrees (max safe angle)
-        
-        // Grading thresholds
-        this.GRADE_S_THRESHOLD = 95;
-        this.GRADE_A_THRESHOLD = 85;
-        this.GRADE_B_THRESHOLD = 70;
-        this.GRADE_C_THRESHOLD = 50;
-        
-        // Game state
-        this.altitude = 500; // meters (starts high)
-        this.velocity = 0; // m/s (positive = falling down, negative = rising up)
-        this.horizontalVelocity = 0; // m/s
-        this.horizontalPosition = 50; // percent (0-100)
-        this.fuel = 100; // percentage
-        this.angle = 0; // degrees (-45 to 45, 0 = upright)
-        
-        // Control state
-        this.isThrusting = false;
-        this.isTiltingLeft = false;
-        this.isTiltingRight = false;
-        this.isRotatingLeft = false;
-        this.isRotatingRight = false;
-        
-        // Animation
-        this.gameActive = false;
-        this.animationFrame = null;
-        this.lastTime = null;
-        this.landingChecked = false; // Prevent double-fire
-        
-        // Landing pad (single pad in center)
-        this.landingPad = { start: 40, end: 60, label: '🎯 Landing Pad' };
-        
-        // Wind (difficulty-based)
-        this.difficulty = 'normal'; // easy, normal, hard
-        this.windForce = 0;
-        this.windTimer = 0;
-        
-        // Particles
-        this.particles = [];
-        
-        // Version marker (only in development/debug)
-        if (typeof DEBUG !== 'undefined' && DEBUG) {
-            console.log('🚀 mars-landing v2 loaded');
-        }
+
+        this.bestScore = this.loadBestScore();
+        this.credits = this.loadCredits();
+
+        this.isPressingThrust = false;
+        this.isRunning = false;
+        this.frameId = null;
+        this.lastTime = 0;
+
+        this.resetState();
     }
-    
+
+    loadBestScore() {
+        const raw = localStorage.getItem('marsRun_bestScore');
+        return raw ? parseInt(raw, 10) : 0;
+    }
+
+    saveBestScore() {
+        localStorage.setItem('marsRun_bestScore', String(this.bestScore));
+    }
+
+    loadCredits() {
+        const raw = localStorage.getItem('marsLanding_credits');
+        return raw ? parseInt(raw, 10) : 0;
+    }
+
+    saveCredits() {
+        localStorage.setItem('marsLanding_credits', String(this.credits));
+    }
+
+    resetState() {
+        this.distance = 0;
+        this.score = 0;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.perfectPasses = 0;
+        this.perfectChain = 0;
+        this.perfectBonusScore = 0;
+        this.achievementBonusScore = 0;
+        this.noThrustStreak = 0;
+        this.survivalTime = 0;
+        this.unlockedAchievements = new Set();
+        this.shipY = 50;
+        this.shipVy = 0;
+        this.fuel = RUN_CONFIG.startFuel;
+        this.shake = 0;
+        this.segments = [];
+        this.lastPassedSegment = -1;
+        this.trackRenderTimer = 0;
+        this.lastTrackHtml = '';
+        this.resultTimers = [];
+        this.dead = false;
+        this.startedAt = performance.now();
+    }
+
     init() {
         if (!this.container) return;
-        
-        this.container.innerHTML = this.createGameHTML();
-        this.setupControls();
+
+        this.container.innerHTML = this.createHTML();
+        this.cacheElements();
+        this.bindControls();
+        this.buildInitialSegments();
         this.start();
     }
-    
-    createGameHTML() {
+
+    showContractSelect() {
+        this.init();
+    }
+
+    cacheElements() {
+        this.canvas = this.container.querySelector('#mars-run-canvas');
+        this.ship = this.container.querySelector('#mars-run-ship');
+        this.track = this.container.querySelector('#mars-run-track');
+        this.scoreEl = this.container.querySelector('#mars-run-score');
+        this.bestEl = this.container.querySelector('#mars-run-best');
+        this.comboEl = this.container.querySelector('#mars-run-combo');
+        this.fuelFillEl = this.container.querySelector('#mars-run-fuel-fill');
+        this.fuelTextEl = this.container.querySelector('#mars-run-fuel-text');
+        this.speedEl = this.container.querySelector('#mars-run-speed');
+        this.distanceEl = this.container.querySelector('#mars-run-distance');
+        this.achievementsEl = this.container.querySelector('#mars-run-achievements');
+        this.statusEl = this.container.querySelector('#mars-run-status');
+        this.bestEl.textContent = String(this.bestScore);
+    }
+
+    createHTML() {
         return `
-            <div class="mars-landing-game" id="mars-landing-container">
-                <div class="game-header">
-                    <div class="game-stat">
-                        <span class="stat-label">Высота:</span>
-                        <span class="stat-value" id="altitude-display">500m</span>
-                    </div>
-                    <div class="game-stat">
-                        <span class="stat-label">↓ Верт. скорость:</span>
-                        <span class="stat-value" id="velocity-display">0.0m/s</span>
-                    </div>
-                    <div class="game-stat">
-                        <span class="stat-label">→ Гориз. скорость:</span>
-                        <span class="stat-value" id="hvelocity-display">0.0m/s</span>
-                    </div>
-                    <div class="game-stat">
-                        <span class="stat-label">Угол:</span>
-                        <span class="stat-value" id="angle-display">0°</span>
-                    </div>
-                    <div class="game-stat">
-                        <span class="stat-label">Топливо:</span>
-                        <div class="fuel-gauge">
-                            <div class="fuel-fill" id="fuel-fill" style="width: 100%"></div>
-                            <span class="fuel-percent" id="fuel-percent">100%</span>
-                        </div>
-                    </div>
-                    <div class="game-stat">
-                        <span class="stat-label">Статус:</span>
-                        <span class="stat-value safety-indicator" id="safety-indicator">SAFE</span>
-                    </div>
+            <div class="mars-run-game">
+                <div class="mars-run-head">
+                    <div class="mars-run-stat"><span>Очки</span><strong id="mars-run-score">0</strong></div>
+                    <div class="mars-run-stat"><span>Рекорд</span><strong id="mars-run-best">0</strong></div>
+                    <div class="mars-run-stat"><span>Комбо</span><strong id="mars-run-combo">x1</strong></div>
+                    <div class="mars-run-stat"><span>Скорость</span><strong id="mars-run-speed">0</strong></div>
+                    <div class="mars-run-stat"><span>Дистанция</span><strong id="mars-run-distance">0</strong></div>
+                    <div class="mars-run-stat"><span>Ачивки</span><strong id="mars-run-achievements">0/3</strong></div>
+                    <div class="mars-run-stat"><span>Статус</span><strong id="mars-run-status">GO</strong></div>
                 </div>
-                
-                <div class="game-canvas" id="game-canvas">
-                    <div class="lander" id="lander">
-                        <div class="lander-body">🚀</div>
-                        <div class="thruster-particles" id="thruster-particles"></div>
-                    </div>
-                    <div class="terrain" id="terrain">
-                        <div class="landing-zone safe" 
-                             style="left: ${this.landingPad.start}%; width: ${this.landingPad.end - this.landingPad.start}%">
-                            <span class="zone-label">${this.landingPad.label}</span>
-                        </div>
-                    </div>
+
+                <div class="mars-run-fuel">
+                    <div class="mars-run-fuel-fill" id="mars-run-fuel-fill"></div>
+                    <span id="mars-run-fuel-text">100%</span>
                 </div>
-                
-                <div class="game-controls">
-                    <button class="game-btn tilt-btn" id="tilt-left-btn">◄ Влево (A)</button>
-                    <button class="game-btn thrust-btn" id="thrust-btn">▲ Двигатель (W/Space)</button>
-                    <button class="game-btn tilt-btn" id="tilt-right-btn">Вправо (D) ►</button>
+
+                <div class="mars-run-canvas" id="mars-run-canvas">
+                    <div class="mars-run-stars"></div>
+                    <div class="mars-run-track" id="mars-run-track"></div>
+                    <div class="mars-run-ship" id="mars-run-ship">🚀</div>
+                    <div class="mars-run-hint">Зажимай W / Space / ЛКМ чтобы держать высоту</div>
                 </div>
-                
-                <div class="game-instructions">
-                    <p>🎯 Цель: Мягко приземлиться в зеленой зоне посадки</p>
-                    <p>⚠️ Безопасно: Верт. &lt;${this.VY_SAFE}м/с, Гориз. &lt;${this.VX_SAFE}м/с, Угол &lt;${this.ANGLE_SAFE}°</p>
-                    <p>⌨️ Управление: W/Space (тяга) • A/D или ◄/► (боковые двигатели) • Q/E (поворот) • R (рестарт)</p>
+
+                <div class="mars-run-controls">
+                    <button class="btn btn-secondary" id="mars-run-thrust-btn">▲ Тяга</button>
+                    <button class="btn btn-primary" id="mars-run-restart-btn">↻ Рестарт</button>
                 </div>
             </div>
         `;
     }
-    
-    setupControls() {
-        // Button controls
-        const thrustBtn = document.getElementById('thrust-btn');
-        const tiltLeftBtn = document.getElementById('tilt-left-btn');
-        const tiltRightBtn = document.getElementById('tilt-right-btn');
-        
-        if (thrustBtn) {
-            thrustBtn.addEventListener('mousedown', () => this.isThrusting = true);
-            thrustBtn.addEventListener('mouseup', () => this.isThrusting = false);
-            thrustBtn.addEventListener('mouseleave', () => this.isThrusting = false);
-            thrustBtn.addEventListener('touchstart', (e) => {
+
+    bindControls() {
+        this.keyDownHandler = (e) => {
+            if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
                 e.preventDefault();
-                this.isThrusting = true;
-            });
-            thrustBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.isThrusting = false;
-            });
-        }
-        
-        if (tiltLeftBtn) {
-            tiltLeftBtn.addEventListener('mousedown', () => this.isTiltingLeft = true);
-            tiltLeftBtn.addEventListener('mouseup', () => this.isTiltingLeft = false);
-            tiltLeftBtn.addEventListener('mouseleave', () => this.isTiltingLeft = false);
-            tiltLeftBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.isTiltingLeft = true;
-            });
-            tiltLeftBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.isTiltingLeft = false;
-            });
-        }
-        
-        if (tiltRightBtn) {
-            tiltRightBtn.addEventListener('mousedown', () => this.isTiltingRight = true);
-            tiltRightBtn.addEventListener('mouseup', () => this.isTiltingRight = false);
-            tiltRightBtn.addEventListener('mouseleave', () => this.isTiltingRight = false);
-            tiltRightBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.isTiltingRight = true;
-            });
-            tiltRightBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.isTiltingRight = false;
-            });
-        }
-        
-        // Keyboard controls
-        this.keydownHandler = (e) => {
-            if (e.code === 'Space' || e.code === 'KeyW') {
-                e.preventDefault();
-                this.isThrusting = true;
-            } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
-                e.preventDefault();
-                this.isTiltingLeft = true;
-            } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
-                e.preventDefault();
-                this.isTiltingRight = true;
-            } else if (e.code === 'KeyQ') {
-                e.preventDefault();
-                this.isRotatingLeft = true;
-            } else if (e.code === 'KeyE') {
-                e.preventDefault();
-                this.isRotatingRight = true;
-            } else if (e.code === 'KeyR') {
+                this.isPressingThrust = true;
+            }
+            if (e.code === 'KeyR') {
                 e.preventDefault();
                 this.restart();
             }
         };
-        
-        this.keyupHandler = (e) => {
-            if (e.code === 'Space' || e.code === 'KeyW') {
+
+        this.keyUpHandler = (e) => {
+            if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
                 e.preventDefault();
-                this.isThrusting = false;
-            } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
-                e.preventDefault();
-                this.isTiltingLeft = false;
-            } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
-                e.preventDefault();
-                this.isTiltingRight = false;
-            } else if (e.code === 'KeyQ') {
-                e.preventDefault();
-                this.isRotatingLeft = false;
-            } else if (e.code === 'KeyE') {
-                e.preventDefault();
-                this.isRotatingRight = false;
+                this.isPressingThrust = false;
             }
         };
-        
-        document.addEventListener('keydown', this.keydownHandler);
-        document.addEventListener('keyup', this.keyupHandler);
-    }
-    
-    restart() {
-        // Reset game state
-        this.altitude = 500;
-        this.velocity = 0;
-        this.horizontalVelocity = 0;
-        this.horizontalPosition = 50;
-        this.fuel = 100;
-        this.angle = 0;
-        this.isThrusting = false;
-        this.isTiltingLeft = false;
-        this.isTiltingRight = false;
-        this.isRotatingLeft = false;
-        this.isRotatingRight = false;
-        this.particles = [];
-        this.landingChecked = false;
-        this.windForce = 0;
-        this.windTimer = 0;
-        
-        // Remove any existing result overlay
-        const existingOverlay = this.container.querySelector('.game-result-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
+
+        document.addEventListener('keydown', this.keyDownHandler);
+        document.addEventListener('keyup', this.keyUpHandler);
+
+        const thrustBtn = this.container.querySelector('#mars-run-thrust-btn');
+        const restartBtn = this.container.querySelector('#mars-run-restart-btn');
+
+        if (thrustBtn) {
+            thrustBtn.addEventListener('mousedown', () => { this.isPressingThrust = true; });
+            thrustBtn.addEventListener('mouseup', () => { this.isPressingThrust = false; });
+            thrustBtn.addEventListener('mouseleave', () => { this.isPressingThrust = false; });
+            thrustBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.isPressingThrust = true; }, { passive: false });
+            thrustBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.isPressingThrust = false; });
         }
-        
-        // Restart game
-        this.gameActive = true;
-        this.lastTime = performance.now();
-        this.gameLoop();
+
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => this.restart());
+        }
+
+        if (this.canvas) {
+            this.canvas.addEventListener('mousedown', () => { this.isPressingThrust = true; });
+            this.canvas.addEventListener('mouseup', () => { this.isPressingThrust = false; });
+            this.canvas.addEventListener('mouseleave', () => { this.isPressingThrust = false; });
+            this.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); this.isPressingThrust = true; }, { passive: false });
+            this.canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isPressingThrust = false; });
+        }
     }
-    
+
+    buildInitialSegments() {
+        this.segments = [];
+        let prevCenter = 50;
+
+        for (let i = 0; i < 18; i += 1) {
+            const safeStart = i < RUN_CONFIG.safeStartSegments;
+            const gapSize = safeStart
+                ? this.randRange(38, 46)
+                : this.randRange(RUN_CONFIG.tunnelMinGap, RUN_CONFIG.tunnelMaxGap);
+            const maxDelta = safeStart ? 4 : 11;
+            const nextCenter = this.clamp(prevCenter + this.randRange(-maxDelta, maxDelta), 22, 78);
+
+            this.segments.push({
+                index: i,
+                x: i * RUN_CONFIG.segmentWidth,
+                center: nextCenter,
+                gap: gapSize,
+                passed: false
+            });
+
+            prevCenter = nextCenter;
+        }
+    }
+
     start() {
-        this.gameActive = true;
+        this.isRunning = true;
+        this.dead = false;
         this.lastTime = performance.now();
-        this.gameLoop();
+        this.frameId = requestAnimationFrame(() => this.gameLoop());
     }
-    
+
+    gameLoop() {
+        if (!this.isRunning) return;
+
+        const now = performance.now();
+        const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+        this.lastTime = now;
+
+        this.update(dt);
+        this.render();
+
+        this.frameId = requestAnimationFrame(() => this.gameLoop());
+    }
+
+    update(dt) {
+        if (this.dead) return;
+
+        const speedScale = 1 + Math.min(0.9, this.distance / 2200);
+        const worldSpeed = RUN_CONFIG.horizontalSpeed * speedScale;
+
+        if (this.isPressingThrust && this.fuel > 0) {
+            this.shipVy -= RUN_CONFIG.thrust * dt;
+            this.fuel = Math.max(0, this.fuel - RUN_CONFIG.fuelBurnPerSec * dt);
+            this.shake = Math.min(6, this.shake + 0.5);
+        } else {
+            this.fuel = Math.min(100, this.fuel + RUN_CONFIG.fuelRecoverPerSec * dt);
+        }
+
+        this.shipVy += RUN_CONFIG.gravity * dt;
+        this.shipVy = this.clamp(this.shipVy, RUN_CONFIG.maxRiseSpeed, RUN_CONFIG.maxFallSpeed);
+        this.shipY += this.shipVy * dt;
+
+        this.distance += worldSpeed * dt;
+        this.survivalTime += dt;
+        this.comboTimer = Math.max(0, this.comboTimer - dt);
+        this.shake = Math.max(0, this.shake - 14 * dt);
+        this.trackRenderTimer += dt;
+
+        if (!this.isPressingThrust || this.fuel <= 0) {
+            this.noThrustStreak += dt;
+        } else {
+            this.noThrustStreak = 0;
+        }
+
+        if (this.comboTimer === 0) {
+            this.combo = 0;
+        }
+
+        if (this.shipY < 2 || this.shipY > 98) {
+            this.crash('Разбился о каньон');
+            return;
+        }
+
+        this.updateSegments(worldSpeed, dt);
+        this.checkCollisionsAndScore();
+        this.checkRunAchievements();
+    }
+
+    updateSegments(worldSpeed, dt) {
+        for (const segment of this.segments) {
+            segment.x -= worldSpeed * dt;
+        }
+
+        this.segments = this.segments.filter((segment) => segment.x > -RUN_CONFIG.segmentWidth);
+
+        while (this.segments.length < RUN_CONFIG.spawnAhead + 8) {
+            const last = this.segments[this.segments.length - 1];
+            const prevCenter = last ? last.center : 50;
+            const earlyGame = this.distance < 380;
+            const gapSize = earlyGame
+                ? this.randRange(38, 46)
+                : this.randRange(RUN_CONFIG.tunnelMinGap, RUN_CONFIG.tunnelMaxGap);
+            const maxDelta = earlyGame
+                ? 5
+                : (10 + Math.min(8, this.distance / 550));
+            const center = this.clamp(prevCenter + this.randRange(-maxDelta, maxDelta), 16, 84);
+            const nextIndex = last ? last.index + 1 : 0;
+            const nextX = last ? last.x + RUN_CONFIG.segmentWidth : 0;
+
+            this.segments.push({
+                index: nextIndex,
+                x: nextX,
+                center,
+                gap: gapSize,
+                passed: false
+            });
+        }
+    }
+
+    checkCollisionsAndScore() {
+        const shipX = 22;
+        const shipRadius = 2.8;
+
+        if (this.distance < RUN_CONFIG.noCollisionDistance) {
+            return;
+        }
+
+        for (const segment of this.segments) {
+            const inColumn = shipX + shipRadius > segment.x && shipX - shipRadius < segment.x + RUN_CONFIG.segmentWidth;
+            if (!inColumn) continue;
+
+            const topLimit = segment.center - segment.gap / 2;
+            const bottomLimit = segment.center + segment.gap / 2;
+            const safe = this.shipY > topLimit + 0.9 && this.shipY < bottomLimit - 0.9;
+
+            if (!safe) {
+                this.crash('Влетел в астероидный пояс');
+                return;
+            }
+        }
+
+        for (const segment of this.segments) {
+            if (segment.passed) continue;
+            if (segment.x + RUN_CONFIG.segmentWidth < shipX) {
+                segment.passed = true;
+                this.combo += 1;
+                this.comboTimer = RUN_CONFIG.comboWindowSec;
+
+                const comboMult = 1 + Math.min(3, Math.floor(this.combo / 3)) * 0.5;
+                const gain = Math.round(10 * comboMult);
+                this.score += gain;
+
+                const offsetFromCenter = Math.abs(this.shipY - segment.center);
+                const perfectWindow = segment.gap * 0.14;
+                if (offsetFromCenter <= perfectWindow) {
+                    this.perfectPasses += 1;
+                    this.perfectChain += 1;
+
+                    let chainLabel = 'x1';
+                    let chainMult = 1;
+                    if (this.perfectChain >= 6) {
+                        chainLabel = 'MEGA';
+                        chainMult = 4;
+                    } else if (this.perfectChain >= 4) {
+                        chainLabel = 'x3';
+                        chainMult = 3;
+                    } else if (this.perfectChain >= 2) {
+                        chainLabel = 'x2';
+                        chainMult = 2;
+                    }
+
+                    const perfectGain = RUN_CONFIG.perfectBaseScore * chainMult;
+                    this.score += perfectGain;
+                    this.perfectBonusScore += perfectGain;
+                    this.comboTimer = Math.min(4.2, this.comboTimer + 0.35);
+                    this.shake = Math.max(0, this.shake - 1.5);
+                    this.flashPerfect(chainLabel, perfectGain);
+                    this.playFeedbackSound(chainLabel === 'MEGA' ? 'mega' : 'perfect');
+                }
+                else {
+                    this.perfectChain = 0;
+                }
+
+                this.lastPassedSegment = segment.index;
+            }
+        }
+    }
+
+    checkRunAchievements() {
+        if (!this.unlockedAchievements.has('distance_300') && this.distance >= 300) {
+            this.unlockAchievement('distance_300', '🏁 300м без аварии', 30);
+        }
+
+        if (!this.unlockedAchievements.has('no_thrust_8') && this.noThrustStreak >= 8) {
+            this.unlockAchievement('no_thrust_8', '🧊 8с без тяги', 35);
+        }
+
+        if (!this.unlockedAchievements.has('perfect_chain_3') && this.perfectChain >= 3) {
+            this.unlockAchievement('perfect_chain_3', '🎯 Perfect Chain x3', 45);
+        }
+    }
+
+    unlockAchievement(id, title, bonusScore) {
+        this.unlockedAchievements.add(id);
+        this.score += bonusScore;
+        this.achievementBonusScore += bonusScore;
+        this.flashToast(`АЧИВКА: ${title}  +${bonusScore}`, 'achievement');
+        this.playFeedbackSound('achievement');
+    }
+
+    flashPerfect(chainLabel, perfectGain) {
+        if (!this.canvas) return;
+
+        const existing = this.container.querySelector('.mars-run-perfect, .mars-run-toast');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.className = 'mars-run-perfect';
+        popup.textContent = `PERFECT ${chainLabel} +${perfectGain}`;
+        this.canvas.appendChild(popup);
+
+        setTimeout(() => {
+            popup.remove();
+        }, 420);
+    }
+
+    flashToast(text, type = 'info') {
+        if (!this.canvas) return;
+
+        const toast = document.createElement('div');
+        toast.className = `mars-run-toast ${type}`;
+        toast.textContent = text;
+        this.canvas.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 900);
+    }
+
+    playFeedbackSound(type = 'perfect') {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+
+            if (!this.audioCtx) {
+                this.audioCtx = new AudioCtx();
+            }
+
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+
+            const now = this.audioCtx.currentTime;
+            const oscillator = this.audioCtx.createOscillator();
+            const gainNode = this.audioCtx.createGain();
+
+            const tones = {
+                perfect: { freq: 620, dur: 0.07, gain: 0.04 },
+                achievement: { freq: 880, dur: 0.12, gain: 0.06 },
+                mega: { freq: 1040, dur: 0.14, gain: 0.08 }
+            };
+            const tone = tones[type] || tones.perfect;
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(tone.freq, now);
+            oscillator.frequency.exponentialRampToValueAtTime(tone.freq * 0.84, now + tone.dur);
+
+            gainNode.gain.setValueAtTime(0.0001, now);
+            gainNode.gain.exponentialRampToValueAtTime(tone.gain, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + tone.dur);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioCtx.destination);
+
+            oscillator.start(now);
+            oscillator.stop(now + tone.dur + 0.02);
+        } catch (e) {
+            // Ignore audio errors in restricted environments
+        }
+    }
+
+    crash(reason) {
+        this.dead = true;
+        this.isRunning = false;
+
+        if (this.frameId) {
+            cancelAnimationFrame(this.frameId);
+            this.frameId = null;
+        }
+
+        const finalScore = this.score;
+        const earnedCredits = Math.max(5, Math.round(finalScore * 0.35));
+        this.credits += earnedCredits;
+        this.saveCredits();
+
+        if (finalScore > this.bestScore) {
+            this.bestScore = finalScore;
+            this.saveBestScore();
+        }
+
+        if (typeof this.callback === 'function') {
+            this.callback(false, finalScore);
+        }
+
+        this.showGameOver(reason, finalScore, earnedCredits);
+    }
+
+    showGameOver(reason, finalScore, earnedCredits) {
+        if (this.resultTimers?.length) {
+            this.resultTimers.forEach((timerId) => clearTimeout(timerId));
+            this.resultTimers = [];
+        }
+
+        const isNewRecord = finalScore >= this.bestScore;
+        const overlay = document.createElement('div');
+        overlay.className = 'mars-run-overlay';
+        overlay.innerHTML = `
+            <div class="mars-run-result">
+                <h2>💥 Миссия провалена</h2>
+                <p class="mars-run-reason">${reason}</p>
+                <div class="mars-run-step" id="result-step-1">Очки: <strong>${finalScore}</strong></div>
+                <div class="mars-run-step" id="result-step-2">Бонусы: <strong>Perfect +${this.perfectBonusScore}, Ачивки +${this.achievementBonusScore}</strong></div>
+                <div class="mars-run-step" id="result-step-3">Дистанция: <strong>${Math.round(this.distance)}м</strong> • Кредиты: <strong>+${earnedCredits}</strong></div>
+                <div class="mars-run-step ${isNewRecord ? 'record-new' : ''}" id="result-step-4">${isNewRecord ? '🏆 Новый рекорд!' : 'Рекорд'}: <strong>${this.bestScore}</strong></div>
+                <button class="btn btn-primary mars-run-play-again" id="mars-run-play-again">Играть снова</button>
+            </div>
+        `;
+
+        this.container.appendChild(overlay);
+
+        const playAgain = overlay.querySelector('#mars-run-play-again');
+        if (playAgain) {
+            playAgain.addEventListener('click', () => this.restart());
+        }
+
+        const steps = overlay.querySelectorAll('.mars-run-step');
+        steps.forEach((step, index) => {
+            const timerId = setTimeout(() => {
+                step.classList.add('show');
+                if (index === 0) this.playFeedbackSound('perfect');
+                if (index === 1) this.playFeedbackSound('achievement');
+                if (index === 3 && isNewRecord) this.playFeedbackSound('mega');
+            }, 260 + index * 320);
+            this.resultTimers.push(timerId);
+        });
+
+        const buttonTimer = setTimeout(() => {
+            playAgain?.classList.add('show');
+        }, 260 + steps.length * 320 + 60);
+        this.resultTimers.push(buttonTimer);
+    }
+
+    restart() {
+        if (this.resultTimers?.length) {
+            this.resultTimers.forEach((timerId) => clearTimeout(timerId));
+            this.resultTimers = [];
+        }
+
+        const overlay = this.container.querySelector('.mars-run-overlay');
+        if (overlay) overlay.remove();
+
+        this.resetState();
+        this.buildInitialSegments();
+        this.isPressingThrust = false;
+
+        this.start();
+    }
+
+    render() {
+        if (!this.ship || !this.track) return;
+
+        const wobble = this.shake > 0 ? (Math.random() - 0.5) * this.shake : 0;
+        this.canvas.style.transform = `translate(${wobble}px, ${wobble * 0.5}px)`;
+
+        this.ship.style.left = '22%';
+        this.ship.style.top = `${this.shipY}%`;
+        this.ship.style.transform = `translate(-50%, -50%) rotate(${this.clamp(this.shipVy * 0.9, -28, 35)}deg)`;
+
+        if (this.trackRenderTimer >= RUN_CONFIG.trackRenderIntervalSec || !this.lastTrackHtml) {
+            const trackHtml = this.segments.map((segment) => {
+                const topHeight = Math.max(0, segment.center - segment.gap / 2);
+                const bottomStart = Math.min(100, segment.center + segment.gap / 2);
+                const bottomHeight = 100 - bottomStart;
+
+                return `
+                    <div class="mars-run-block top" style="left:${segment.x}%; width:${RUN_CONFIG.segmentWidth}%; height:${topHeight}%"></div>
+                    <div class="mars-run-block bottom" style="left:${segment.x}%; width:${RUN_CONFIG.segmentWidth}%; top:${bottomStart}%; height:${bottomHeight}%"></div>
+                `;
+            }).join('');
+
+            if (trackHtml !== this.lastTrackHtml) {
+                this.track.innerHTML = trackHtml;
+                this.lastTrackHtml = trackHtml;
+            }
+            this.trackRenderTimer = 0;
+        }
+
+        this.scoreEl.textContent = String(this.score);
+        this.bestEl.textContent = String(this.bestScore);
+        this.comboEl.textContent = `x${Math.max(1, this.combo)}`;
+        this.speedEl.textContent = `${(RUN_CONFIG.horizontalSpeed * (1 + Math.min(0.9, this.distance / 2200))).toFixed(0)}`;
+        this.distanceEl.textContent = `${Math.round(this.distance)}`;
+        if (this.achievementsEl) {
+            this.achievementsEl.textContent = `${this.unlockedAchievements.size}/3`;
+        }
+
+        const danger = this.shipY < 14 || this.shipY > 86;
+        this.statusEl.textContent = this.dead ? 'DEAD' : danger ? 'RISK' : 'FLOW';
+        this.statusEl.style.color = this.dead ? '#ff4d6d' : danger ? '#ffd166' : '#7ae582';
+
+        const fuelSafe = Math.round(this.fuel);
+        this.fuelFillEl.style.width = `${fuelSafe}%`;
+        this.fuelTextEl.textContent = `${fuelSafe}%`;
+        this.fuelFillEl.style.background = fuelSafe < 25
+            ? 'linear-gradient(90deg, #ff4d6d, #ff758f)'
+            : fuelSafe < 55
+                ? 'linear-gradient(90deg, #ffd166, #fca311)'
+                : 'linear-gradient(90deg, #00f5d4, #4cc9f0)';
+    }
+
     destroy() {
-        this.gameActive = false;
-        
-        if (this.animationFrame) {
-            cancelAnimationFrame(this.animationFrame);
-            this.animationFrame = null;
+        this.isRunning = false;
+
+        if (this.resultTimers?.length) {
+            this.resultTimers.forEach((timerId) => clearTimeout(timerId));
+            this.resultTimers = [];
         }
-        
-        // Remove event listeners
-        if (this.keydownHandler) {
-            document.removeEventListener('keydown', this.keydownHandler);
+
+        if (this.frameId) {
+            cancelAnimationFrame(this.frameId);
+            this.frameId = null;
         }
-        if (this.keyupHandler) {
-            document.removeEventListener('keyup', this.keyupHandler);
+
+        if (this.keyDownHandler) {
+            document.removeEventListener('keydown', this.keyDownHandler);
         }
-        
-        // Clear container
+        if (this.keyUpHandler) {
+            document.removeEventListener('keyup', this.keyUpHandler);
+        }
+
         if (this.container) {
             this.container.innerHTML = '';
         }
     }
-    
-    gameLoop() {
-        if (!this.gameActive) return;
-        
-        const currentTime = performance.now();
-        const deltaTime = (currentTime - this.lastTime) / 1000; // Convert to seconds
-        this.lastTime = currentTime;
-        
-        this.update(deltaTime);
-        this.render();
-        
-        this.animationFrame = requestAnimationFrame(() => this.gameLoop());
+
+    randRange(min, max) {
+        return min + Math.random() * (max - min);
     }
-    
-    update(deltaTime) {
-        // Cap deltaTime to prevent huge jumps (0.1s = max ~10 FPS before physics becomes unstable)
-        // This prevents spiral of death where slow frame causes large dt, which causes slower next frame
-        deltaTime = Math.min(deltaTime, 0.1);
-        
-        // Apply main thrust (reduces velocity = slows fall or goes up)
-        if (this.isThrusting && this.fuel > 0) {
-            this.velocity -= this.THRUST_POWER * deltaTime;
-            this.fuel -= 10 * deltaTime; // Consume fuel
-            this.fuel = Math.max(0, this.fuel);
-            this.createThrusterParticles();
-        }
-        
-        // Apply side thrusters (horizontal movement)
-        if (this.isTiltingLeft && this.fuel > 0) {
-            this.horizontalVelocity -= this.SIDE_THRUST_POWER * deltaTime;
-            this.fuel -= 3 * deltaTime;
-            this.fuel = Math.max(0, this.fuel);
-        }
-        if (this.isTiltingRight && this.fuel > 0) {
-            this.horizontalVelocity += this.SIDE_THRUST_POWER * deltaTime;
-            this.fuel -= 3 * deltaTime;
-            this.fuel = Math.max(0, this.fuel);
-        }
-        
-        // Apply rotation
-        if (this.isRotatingLeft) {
-            this.angle = Math.max(-45, this.angle - this.ROTATION_SPEED * deltaTime);
-        }
-        if (this.isRotatingRight) {
-            this.angle = Math.min(45, this.angle + this.ROTATION_SPEED * deltaTime);
-        }
-        
-        // Auto-stabilize angle slightly when not rotating
-        if (!this.isRotatingLeft && !this.isRotatingRight) {
-            this.angle *= 0.98;
-        }
-        
-        // Apply Mars gravity (increases velocity = speeds up fall)
-        this.velocity += this.MARS_GRAVITY * deltaTime;
-        
-        // Apply wind (on normal/hard difficulty)
-        if (this.difficulty !== 'easy') {
-            this.windTimer += deltaTime;
-            if (this.windTimer > 2) { // Change wind every 2 seconds
-                this.windTimer = 0;
-                const windStrength = this.difficulty === 'hard' ? 0.8 : 0.4;
-                this.windForce = (Math.random() - 0.5) * windStrength;
-            }
-            this.horizontalVelocity += this.windForce * deltaTime;
-        }
-        
-        // Apply horizontal damping (air resistance)
-        this.horizontalVelocity *= 0.99;
-        
-        // Update position
-        this.altitude -= this.velocity * deltaTime;
-        this.horizontalPosition += this.horizontalVelocity * deltaTime * 0.5;
-        
-        // Clamp horizontal position
-        this.horizontalPosition = Math.max(0, Math.min(100, this.horizontalPosition));
-        
-        // Update particles
-        this.updateParticles(deltaTime);
-        
-        // Check landing/crash (only once)
-        if (this.altitude <= 0 && !this.landingChecked) {
-            this.altitude = 0;
-            this.landingChecked = true;
-            this.checkLanding();
-        }
-    }
-    
-    render() {
-        // Update displays
-        const altitudeDisplay = document.getElementById('altitude-display');
-        const velocityDisplay = document.getElementById('velocity-display');
-        const hvelocityDisplay = document.getElementById('hvelocity-display');
-        const angleDisplay = document.getElementById('angle-display');
-        const fuelFill = document.getElementById('fuel-fill');
-        const fuelPercent = document.getElementById('fuel-percent');
-        const safetyIndicator = document.getElementById('safety-indicator');
-        const lander = document.getElementById('lander');
-        
-        if (altitudeDisplay) {
-            altitudeDisplay.textContent = `${Math.max(0, Math.round(this.altitude))}m`;
-        }
-        
-        if (velocityDisplay) {
-            const absVelocity = Math.abs(this.velocity);
-            velocityDisplay.textContent = `${absVelocity.toFixed(1)}m/s`;
-            velocityDisplay.style.color = absVelocity > this.VY_SAFE ? '#ff0000' : '#00ff00';
-        }
-        
-        if (hvelocityDisplay) {
-            const absHVelocity = Math.abs(this.horizontalVelocity);
-            hvelocityDisplay.textContent = `${absHVelocity.toFixed(1)}m/s`;
-            hvelocityDisplay.style.color = absHVelocity > this.VX_SAFE ? '#ff0000' : '#00ff00';
-        }
-        
-        if (angleDisplay) {
-            const absAngle = Math.abs(this.angle);
-            angleDisplay.textContent = `${absAngle.toFixed(0)}°`;
-            angleDisplay.style.color = absAngle > this.ANGLE_SAFE ? '#ff0000' : '#00ff00';
-        }
-        
-        if (fuelFill) {
-            fuelFill.style.width = `${this.fuel}%`;
-            fuelFill.style.backgroundColor = this.fuel < 20 ? '#ff0000' : this.fuel < 50 ? '#ffaa00' : '#00ff00';
-        }
-        
-        if (fuelPercent) {
-            fuelPercent.textContent = `${Math.round(this.fuel)}%`;
-        }
-        
-        // Safety indicator
-        if (safetyIndicator) {
-            const isSafe = Math.abs(this.velocity) < this.VY_SAFE && 
-                          Math.abs(this.horizontalVelocity) < this.VX_SAFE && 
-                          Math.abs(this.angle) < this.ANGLE_SAFE;
-            safetyIndicator.textContent = isSafe ? 'SAFE ✓' : 'RISK ⚠';
-            safetyIndicator.style.color = isSafe ? '#00ff00' : '#ff0000';
-        }
-        
-        // Update lander position (FIXED: was inverted before)
-        if (lander) {
-            // altitude goes from 500 (top) to 0 (bottom)
-            // We want: altitude 500 -> top of canvas (100% from bottom)
-            //          altitude 0 -> bottom of canvas (0% from bottom)
-            const verticalPercent = (this.altitude / 500) * 100;
-            lander.style.bottom = `${verticalPercent}%`;
-            lander.style.left = `${this.horizontalPosition}%`;
-            lander.style.transform = `translate(-50%, 0) rotate(${this.angle}deg)`;
-        }
-        
-        // Render particles
-        this.renderParticles();
-    }
-    
-    createThrusterParticles() {
-        const lander = document.getElementById('lander');
-        if (!lander) return;
-        
-        for (let i = 0; i < 3; i++) {
-            const particle = {
-                x: this.horizontalPosition,
-                y: this.altitude,
-                vx: (Math.random() - 0.5) * 2,
-                vy: Math.random() * 3 + 2,
-                life: 0.5,
-                maxLife: 0.5,
-                size: Math.random() * 4 + 2
-            };
-            this.particles.push(particle);
-        }
-    }
-    
-    updateParticles(deltaTime) {
-        this.particles = this.particles.filter(p => {
-            p.life -= deltaTime;
-            p.y -= p.vy * deltaTime * 20;
-            p.x += p.vx * deltaTime * 5;
-            return p.life > 0;
-        });
-    }
-    
-    renderParticles() {
-        const container = document.getElementById('thruster-particles');
-        if (!container) return;
-        
-        container.innerHTML = this.particles.map(p => {
-            const opacity = p.life / p.maxLife;
-            // Use same coordinate system as lander
-            const verticalPercent = (p.y / 500) * 100;
-            
-            return `<div class="particle" style="
-                position: absolute;
-                bottom: ${verticalPercent}%;
-                left: ${p.x}%;
-                width: ${p.size}px;
-                height: ${p.size}px;
-                background: rgba(255, ${Math.floor(150 + opacity * 105)}, 0, ${opacity});
-                border-radius: 50%;
-                pointer-events: none;
-            "></div>`;
-        }).join('');
-    }
-    
-    checkLanding() {
-        this.gameActive = false;
-        
-        if (this.animationFrame) {
-            cancelAnimationFrame(this.animationFrame);
-        }
-        
-        // Remove event listeners
-        document.removeEventListener('keydown', this.keydownHandler);
-        document.removeEventListener('keyup', this.keyupHandler);
-        
-        // Calculate landing parameters
-        const landingVelocityY = Math.abs(this.velocity);
-        const landingVelocityX = Math.abs(this.horizontalVelocity);
-        const landingAngle = Math.abs(this.angle);
-        
-        // Check if in landing pad
-        const inLandingPad = this.horizontalPosition >= this.landingPad.start && 
-                            this.horizontalPosition <= this.landingPad.end;
-        
-        // Check if all parameters are safe
-        const velocityYSafe = landingVelocityY <= this.VY_SAFE;
-        const velocityXSafe = landingVelocityX <= this.VX_SAFE;
-        const angleSafe = landingAngle <= this.ANGLE_SAFE;
-        
-        const success = inLandingPad && velocityYSafe && velocityXSafe && angleSafe;
-        
-        // Build detailed message
-        let message = '';
-        let failureReasons = [];
-        
-        if (!inLandingPad) {
-            failureReasons.push('❌ Вне зоны посадки');
-        }
-        if (!velocityYSafe) {
-            failureReasons.push(`❌ Верт. скорость слишком большая: ${landingVelocityY.toFixed(1)} м/с (макс: ${this.VY_SAFE})`);
-        }
-        if (!velocityXSafe) {
-            failureReasons.push(`❌ Гориз. скорость слишком большая: ${landingVelocityX.toFixed(1)} м/с (макс: ${this.VX_SAFE})`);
-        }
-        if (!angleSafe) {
-            failureReasons.push(`❌ Угол слишком большой: ${landingAngle.toFixed(0)}° (макс: ${this.ANGLE_SAFE}°)`);
-        }
-        
-        // Calculate score and grade
-        let score = 0;
-        let grade = 'F';
-        
-        if (success) {
-            // Score based on: softness (50), precision (30), fuel efficiency (20)
-            const softnessScore = ((this.VY_SAFE - landingVelocityY) / this.VY_SAFE) * 50;
-            
-            // Precision: distance from center of pad
-            const padCenter = (this.landingPad.start + this.landingPad.end) / 2;
-            const padWidth = this.landingPad.end - this.landingPad.start;
-            const distanceFromCenter = Math.abs(this.horizontalPosition - padCenter);
-            const precisionScore = (1 - (distanceFromCenter / (padWidth / 2))) * 30;
-            
-            const fuelScore = (this.fuel / 100) * 20;
-            
-            score = Math.round(softnessScore + precisionScore + fuelScore);
-            
-            // Assign grade based on predefined thresholds
-            if (score >= this.GRADE_S_THRESHOLD) grade = 'S';
-            else if (score >= this.GRADE_A_THRESHOLD) grade = 'A';
-            else if (score >= this.GRADE_B_THRESHOLD) grade = 'B';
-            else if (score >= this.GRADE_C_THRESHOLD) grade = 'C';
-            else grade = 'D';
-            
-            message = `🎉 Успешная посадка!\n\nОценка: ${grade}\nОчки: ${score}\n\n✓ Верт. скорость: ${landingVelocityY.toFixed(1)} м/с\n✓ Гориз. скорость: ${landingVelocityX.toFixed(1)} м/с\n✓ Угол: ${landingAngle.toFixed(0)}°\n✓ Топливо: ${Math.round(this.fuel)}%`;
-        } else {
-            message = `💥 Авария при посадке!\n\n${failureReasons.join('\n')}`;
-        }
-        
-        this.showResult(success, message, score, grade);
-    }
-    
-    showResult(success, message, score, grade = 'F') {
-        if (!this.container) return;
-        
-        // Remove any existing overlay first
-        const existingOverlay = this.container.querySelector('.game-result-overlay');
-        if (existingOverlay) {
-            existingOverlay.remove();
-        }
-        
-        const resultDiv = document.createElement('div');
-        resultDiv.className = 'game-result-overlay';
-        
-        const gradeDisplay = success ? `<div class="grade-display grade-${grade}">${grade}</div>` : '';
-        
-        // Create result container
-        const resultContainer = document.createElement('div');
-        resultContainer.className = `game-result ${success ? 'success' : 'failure'}`;
-        
-        // Create heading
-        const heading = document.createElement('h2');
-        heading.textContent = success ? '✅ Миссия выполнена!' : '❌ Миссия провалена';
-        resultContainer.appendChild(heading);
-        
-        // Add grade display if success
-        if (gradeDisplay) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = gradeDisplay;
-            resultContainer.appendChild(tempDiv.firstChild);
-        }
-        
-        // Create message paragraph (safely set text content, not innerHTML)
-        const messagePara = document.createElement('p');
-        messagePara.className = 'result-message';
-        messagePara.textContent = message;
-        resultContainer.appendChild(messagePara);
-        
-        // Create buttons container
-        const buttonsDiv = document.createElement('div');
-        buttonsDiv.className = 'result-buttons';
-        
-        const restartBtn = document.createElement('button');
-        restartBtn.className = 'btn btn-secondary btn-large';
-        restartBtn.id = 'game-restart-btn';
-        restartBtn.textContent = '🔄 Попробовать снова (R)';
-        
-        const continueBtn = document.createElement('button');
-        continueBtn.className = 'btn btn-primary btn-large';
-        continueBtn.id = 'game-continue-btn';
-        continueBtn.textContent = 'Продолжить';
-        
-        buttonsDiv.appendChild(restartBtn);
-        buttonsDiv.appendChild(continueBtn);
-        resultContainer.appendChild(buttonsDiv);
-        
-        resultDiv.appendChild(resultContainer);
-        this.container.appendChild(resultDiv);
-        
-        // Add event listeners
-        restartBtn.addEventListener('click', () => {
-            this.restart();
-        });
-        
-        continueBtn.addEventListener('click', () => {
-            if (this.callback) {
-                this.callback(success, score);
-            }
-        });
+
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
     }
 }
 
-// Add game styles
-const marsLandingStyles = document.createElement('style');
-marsLandingStyles.textContent = `
-    .mars-landing-game {
-        background: rgba(10, 0, 21, 0.95);
+const marsRunStyles = document.createElement('style');
+marsRunStyles.textContent = `
+    .mars-run-game {
+        background: rgba(10, 0, 21, 0.92);
         border-radius: 20px;
-        padding: 2rem;
         border: 2px solid var(--neon-cyan);
+        padding: 1rem;
         font-family: 'Orbitron', sans-serif;
     }
-    
-    .game-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 1.5rem;
+
+    .mars-run-head {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
         gap: 0.5rem;
-        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
     }
-    
-    .game-stat {
+
+    .mars-run-stat {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        padding: 0.45rem 0.6rem;
         display: flex;
         flex-direction: column;
-        gap: 0.3rem;
-        min-width: 100px;
+        gap: 0.2rem;
     }
-    
-    .stat-label {
-        font-size: 0.75rem;
+
+    .mars-run-stat span {
         color: var(--color-gray);
-        white-space: nowrap;
+        font-size: 0.7rem;
     }
-    
-    .stat-value {
-        font-size: 1.2rem;
+
+    .mars-run-stat strong {
         color: var(--neon-cyan);
-        font-weight: bold;
-        transition: color 0.3s;
+        font-size: 1.05rem;
     }
-    
-    .safety-indicator {
-        font-size: 1rem;
-        font-weight: bold;
-        text-shadow: 0 0 10px currentColor;
-    }
-    
-    .fuel-gauge {
-        width: 150px;
-        height: 30px;
+
+    .mars-run-fuel {
+        position: relative;
+        height: 20px;
+        border-radius: 999px;
+        overflow: hidden;
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        position: relative;
-        overflow: hidden;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 0.8rem;
     }
-    
-    .fuel-fill {
+
+    .mars-run-fuel-fill {
         height: 100%;
-        background: #00ff00;
-        transition: width 0.2s, background-color 0.3s;
-    }
-    
-    .fuel-percent {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: white;
-        font-size: 0.9rem;
-        font-weight: bold;
-        text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-    }
-    
-    .game-canvas {
-        position: relative;
-        height: 400px;
-        background: linear-gradient(180deg, #1a0a2e 0%, #3d1a1a 100%);
-        border-radius: 15px;
-        overflow: hidden;
-        margin-bottom: 1.5rem;
-    }
-    
-    .lander {
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translate(-50%, 0);
-        transition: transform 0.1s;
-        z-index: 10;
-    }
-    
-    .lander-body {
-        font-size: 3rem;
-        filter: drop-shadow(0 0 10px rgba(76, 201, 240, 0.8));
-    }
-    
-    .thruster-particles {
-        position: absolute;
-        top: 0;
-        left: 0;
         width: 100%;
-        height: 100%;
-        pointer-events: none;
+        transition: width 0.15s linear;
+        background: linear-gradient(90deg, #00f5d4, #4cc9f0);
     }
-    
-    .terrain {
+
+    .mars-run-fuel span {
         position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 60px;
-        background: #8B4513;
-        border-top: 3px solid #654321;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: 0.75rem;
+        color: #fff;
+        text-shadow: 0 0 6px rgba(0,0,0,0.6);
+        font-weight: 700;
     }
-    
-    .landing-zone {
+
+    .mars-run-canvas {
+        position: relative;
+        height: 420px;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 0.8rem;
+        background: radial-gradient(circle at 20% 20%, #2a1f55, #0c0a18 55%, #12040a 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .mars-run-stars {
         position: absolute;
-        bottom: 0;
-        height: 100%;
-        border-top: 4px solid;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        inset: 0;
+        background-image:
+            radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.9), transparent),
+            radial-gradient(2px 2px at 140px 80px, rgba(255,255,255,0.7), transparent),
+            radial-gradient(1px 1px at 280px 180px, rgba(255,255,255,0.8), transparent),
+            radial-gradient(2px 2px at 420px 40px, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1px 1px at 520px 260px, rgba(255,255,255,0.8), transparent);
+        opacity: 0.7;
     }
-    
-    .landing-zone.safe {
-        background: rgba(0, 255, 0, 0.2);
-        border-color: #00ff00;
-    }
-    
-    .landing-zone.danger {
-        background: rgba(255, 0, 0, 0.2);
-        border-color: #ff0000;
-    }
-    
-    .zone-label {
-        color: white;
-        font-size: 0.9rem;
-        font-weight: bold;
-        text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-    }
-    
-    .game-controls {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-    }
-    
-    .game-btn {
-        padding: 15px 30px;
-        font-size: 1rem;
-        font-family: 'Orbitron', sans-serif;
-        border: 2px solid var(--neon-cyan);
-        background: rgba(76, 201, 240, 0.1);
-        color: white;
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.3s;
-        user-select: none;
-        min-width: 48px;
-        min-height: 48px;
-    }
-    
-    .game-btn:hover {
-        background: rgba(76, 201, 240, 0.3);
-        box-shadow: 0 0 20px rgba(76, 201, 240, 0.6);
-    }
-    
-    .game-btn:active {
-        transform: scale(0.95);
-        box-shadow: 0 0 30px rgba(76, 201, 240, 0.9);
-    }
-    
-    .thrust-btn {
-        border-color: var(--neon-pink);
-        background: rgba(255, 0, 191, 0.1);
-    }
-    
-    .thrust-btn:hover {
-        background: rgba(255, 0, 191, 0.3);
-        box-shadow: 0 0 20px rgba(255, 0, 191, 0.6);
-    }
-    
-    .game-instructions {
-        text-align: center;
-        color: var(--color-gray);
-        font-size: 0.9rem;
-        line-height: 1.6;
-    }
-    
-    .game-instructions p {
-        margin: 0.3rem 0;
-    }
-    
-    .game-result-overlay {
+
+    .mars-run-track {
         position: absolute;
+        inset: 0;
+    }
+
+    .mars-run-block {
+        position: absolute;
+        background: linear-gradient(160deg, #5c3d2e, #8d6748);
+        box-shadow: inset 0 0 18px rgba(0,0,0,0.45), 0 0 18px rgba(237, 137, 54, 0.25);
+        border-left: 1px solid rgba(255, 255, 255, 0.12);
+        border-right: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .mars-run-block.top {
         top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        animation: fadeIn 0.3s ease-in;
+        border-bottom: 3px solid rgba(255, 185, 100, 0.45);
     }
-    
-    .game-result {
-        background: rgba(22, 33, 62, 0.95);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 3rem;
+
+    .mars-run-block.bottom {
+        border-top: 3px solid rgba(255, 185, 100, 0.45);
+    }
+
+    .mars-run-ship {
+        position: absolute;
+        left: 22%;
+        top: 50%;
+        z-index: 5;
+        font-size: 2.2rem;
+        filter: drop-shadow(0 0 14px rgba(76, 201, 240, 0.9));
+        will-change: transform, top;
+        user-select: none;
+    }
+
+    .mars-run-hint {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255,255,255,0.8);
+        font-size: 0.82rem;
         text-align: center;
-        border: 2px solid;
-        max-width: 500px;
+        z-index: 4;
+        background: rgba(0,0,0,0.25);
+        border-radius: 999px;
+        padding: 0.25rem 0.65rem;
     }
-    
-    .game-result.success {
-        border-color: #00ff00;
-        box-shadow: 0 0 40px rgba(0, 255, 0, 0.4);
+
+    .mars-run-perfect {
+        position: absolute;
+        left: 50%;
+        top: 18%;
+        transform: translate(-50%, 0);
+        color: #7ae582;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-shadow: 0 0 14px rgba(122, 229, 130, 0.95);
+        animation: marsRunPerfectPop 0.42s ease-out forwards;
+        pointer-events: none;
+        z-index: 8;
     }
-    
-    .game-result.failure {
-        border-color: #ff0000;
-        box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
+
+    @keyframes marsRunPerfectPop {
+        0% { opacity: 0; transform: translate(-50%, 8px) scale(0.85); }
+        22% { opacity: 1; transform: translate(-50%, 0) scale(1.06); }
+        100% { opacity: 0; transform: translate(-50%, -16px) scale(0.98); }
     }
-    
-    .game-result h2 {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-    }
-    
-    .game-result p {
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
-        color: var(--color-gray);
-    }
-    
-    .result-message {
-        white-space: pre-line;
-        line-height: 1.6;
-        text-align: left;
-        padding: 1rem;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 10px;
-    }
-    
-    .result-buttons {
+
+    .mars-run-controls {
         display: flex;
-        gap: 1rem;
         justify-content: center;
-        flex-wrap: wrap;
+        gap: 0.6rem;
     }
-    
-    .grade-display {
-        font-size: 5rem;
-        font-weight: bold;
-        margin: 1rem 0;
-        text-shadow: 0 0 30px currentColor;
-        animation: gradeAppear 0.5s ease-out;
+
+    .mars-run-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: grid;
+        place-items: center;
+        z-index: 30;
     }
-    
-    .grade-S { color: #FFD700; }
-    .grade-A { color: #00FF00; }
-    .grade-B { color: #4CAF50; }
-    .grade-C { color: #FFA500; }
-    .grade-D { color: #FF6B6B; }
-    .grade-F { color: #FF0000; }
-    
-    @keyframes gradeAppear {
-        from {
-            transform: scale(0);
-            opacity: 0;
-        }
-        to {
-            transform: scale(1);
-            opacity: 1;
-        }
+
+    .mars-run-result {
+        width: min(92%, 430px);
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(14, 12, 31, 0.95);
+        padding: 1.2rem 1rem;
+        text-align: center;
     }
-    
+
+    .mars-run-result h2 {
+        color: #ff758f;
+        margin: 0 0 0.55rem;
+    }
+
+    .mars-run-result p {
+        margin: 0.3rem 0;
+        color: #d6d3f0;
+    }
+
+    .mars-run-reason {
+        margin-bottom: 0.6rem !important;
+    }
+
+    .mars-run-step {
+        margin: 0.35rem 0;
+        color: #d6d3f0;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.24s ease, transform 0.24s ease;
+    }
+
+    .mars-run-step.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .mars-run-step.record-new {
+        color: #7ae582;
+        text-shadow: 0 0 12px rgba(122, 229, 130, 0.45);
+    }
+
+    .mars-run-play-again {
+        margin-top: 0.7rem;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.24s ease, transform 0.24s ease;
+    }
+
+    .mars-run-play-again.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .mars-run-toast {
+        position: absolute;
+        left: 50%;
+        top: 24%;
+        transform: translate(-50%, 0);
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        animation: marsRunToast 0.9s ease-out forwards;
+        pointer-events: none;
+        z-index: 8;
+    }
+
+    .mars-run-toast.achievement {
+        color: #0c0a18;
+        background: linear-gradient(90deg, #7ae582, #4cc9f0);
+        box-shadow: 0 0 16px rgba(122, 229, 130, 0.55);
+    }
+
+    @keyframes marsRunToast {
+        0% { opacity: 0; transform: translate(-50%, 8px) scale(0.92); }
+        12% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -14px) scale(0.97); }
+    }
+
     @media (max-width: 768px) {
-        .game-header {
-            /* Keep row layout on mobile to allow horizontal wrapping of compact stats */
-            justify-content: space-around;
+        .mars-run-canvas {
+            height: 330px;
         }
-        
-        .game-stat {
-            min-width: 80px;
-        }
-        
-        .stat-label {
-            font-size: 0.65rem;
-        }
-        
-        .stat-value {
-            font-size: 1rem;
-        }
-        
-        .game-canvas {
-            height: 300px;
-        }
-        
-        .lander-body {
-            font-size: 2rem;
+
+        .mars-run-ship {
+            font-size: 1.85rem;
         }
     }
 `;
-document.head.appendChild(marsLandingStyles);
 
-// Export
+if (!document.getElementById('mars-run-styles')) {
+    marsRunStyles.id = 'mars-run-styles';
+    document.head.appendChild(marsRunStyles);
+}
+
 window.MarsLandingGame = MarsLandingGame;

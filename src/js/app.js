@@ -535,7 +535,12 @@ class CosmicLabApp {
             console.log(`✅ ${gameName} загружена`);
             try {
                 this.currentGame = new gameClass(wrapper, onGameComplete);
-                this.currentGame.init();
+                // mars-landing starts with contract selection
+                if (gameType === 'mars-landing') {
+                    this.currentGame.showContractSelect();
+                } else {
+                    this.currentGame.init();
+                }
             } catch (error) {
                 console.error(`❌ Ошибка инициализации ${gameName}:`, error);
                 this.showGameError('Ошибка запуска', `Не удалось запустить игру "${gameName}". Попробуйте другую игру.`);

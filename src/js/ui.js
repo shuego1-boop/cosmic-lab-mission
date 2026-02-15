@@ -223,24 +223,25 @@ const UI = {
         finalScore.textContent = score;
         maxScoreEl.textContent = maxScore;
         
-        let breakdownHTML = '<h3>Результаты по этапам:</h3><ul style="list-style: none; padding: 0;">';
+        let breakdownHTML = '<h3 class="results-card-title">Результаты по этапам</h3><ul class="results-list">';
         breakdown.forEach(item => {
-            breakdownHTML += `<li style="padding: 0.5rem 0; font-size: 1.1rem;">
-                ${item.correct ? '✅' : '❌'} ${item.name}: ${item.points} баллов
+            breakdownHTML += `<li class="results-list-item ${item.correct ? 'ok' : 'bad'}">
+                <span class="results-item-name">${item.correct ? '✅' : '❌'} ${item.name}</span>
+                <span class="results-item-points">${item.points} б.</span>
             </li>`;
         });
         breakdownHTML += '</ul>';
         scoreBreakdown.innerHTML = breakdownHTML;
         
         if (recommendations.length > 0) {
-            let recsHTML = '<ul style="list-style: none; padding: 0;">';
+            let recsHTML = '<ul class="recommendations-list">';
             recommendations.forEach(rec => {
-                recsHTML += `<li style="padding: 0.5rem 0; font-size: 1rem;">📚 ${rec}</li>`;
+                recsHTML += `<li class="recommendations-item">📚 ${rec}</li>`;
             });
             recsHTML += '</ul>';
             recommendationsContent.innerHTML = recsHTML;
         } else {
-            recommendationsContent.innerHTML = '<p style="font-size: 1.1rem; color: var(--color-light-blue);">🎉 Отлично! Вы показали отличные знания по всем темам!</p>';
+            recommendationsContent.innerHTML = '<p class="recommendations-success">🎉 Отлично! Вы показали отличные знания по всем темам!</p>';
         }
     },
 

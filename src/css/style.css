@@ -461,7 +461,18 @@ h1, h2, h3, h4 {
     border-radius: 15px;
     font-size: 1.1rem;
     line-height: 1.6;
-    animation: slideIn 0.3s ease-out;
+    animation: feedbackFadeIn 0.3s ease-out;
+}
+
+@keyframes feedbackFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .feedback.correct {
@@ -500,71 +511,302 @@ h1, h2, h3, h4 {
     margin: 0 auto;
 }
 
+/* Compact mission/quiz layout (fit typical 1366x768 without mandatory scroll) */
+#mission-screen,
+#final-screen {
+    padding: 20px 0;
+}
+
+#mission-screen .container,
+#final-screen .container {
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+#mission-screen .mission-progress {
+    margin-bottom: 1rem;
+}
+
+#mission-screen .progress-bar {
+    height: 8px;
+    margin-bottom: 0.3rem;
+}
+
+#mission-screen .progress-text,
+#final-screen .quiz-progress {
+    font-size: 1rem;
+}
+
+#mission-screen .stage-content,
+#final-screen .stage-content {
+    padding: 1.25rem;
+}
+
+#mission-screen .stage-title {
+    font-size: clamp(1.7rem, 3.5vh, 2.2rem);
+    margin-bottom: 0.9rem;
+}
+
+#mission-screen .stage-question,
+#final-screen .stage-question {
+    font-size: clamp(1rem, 2.4vh, 1.25rem);
+    margin-bottom: 1rem;
+    line-height: 1.45;
+}
+
+#mission-screen .options-container,
+#final-screen .options-container {
+    gap: 0.7rem;
+    margin: 1rem 0;
+}
+
+#mission-screen .option-btn,
+#final-screen .option-btn {
+    min-height: 64px;
+    padding: 1rem 1.1rem;
+    font-size: 1.02rem;
+}
+
+#mission-screen .feedback,
+#final-screen .feedback {
+    margin-top: 1rem;
+    padding: 1rem 1.1rem;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+#mission-screen .feedback-title,
+#final-screen .feedback-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.6rem;
+}
+
+#mission-screen #next-stage-btn {
+    margin-top: 1rem !important;
+    padding: 12px 28px;
+    min-width: 220px;
+    font-size: 1.05rem;
+}
+
+#final-screen .screen-title {
+    margin-bottom: 1rem;
+}
+
+#final-screen .quiz-description {
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
+
+#final-screen .quiz-progress {
+    margin-bottom: 1rem;
+}
+
 /* Результаты */
 .results-panel {
     max-width: 900px;
     margin: 0 auto;
 }
 
+#results-container {
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+#results-container .screen-title {
+    margin-bottom: 0.65rem;
+}
+
+#results-container .results-panel {
+    max-width: 1120px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 0.85rem;
+    align-items: start;
+}
+
 .score-display {
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 0;
+    background: rgba(22, 33, 62, 0.55);
+    border: 1px solid rgba(76, 201, 240, 0.25);
+    border-radius: 15px;
+    padding: 0.85rem 0.65rem;
 }
 
 .score-circle {
     display: inline-block;
-    width: 200px;
-    height: 200px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--color-purple), var(--color-blue));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     box-shadow: var(--glow-blue);
     animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .score-value {
-    font-size: 4rem;
+    font-size: 2.55rem;
     font-weight: 900;
     font-family: 'Orbitron', sans-serif;
 }
-
+    font-size: 1rem;
 .score-max {
     font-size: 1.5rem;
     opacity: 0.8;
 }
-
+    font-size: 1rem;
 .score-label {
     font-size: 1.3rem;
     color: var(--color-gray);
 }
 
-.score-breakdown {
+    padding: 0.9rem 1rem;
     background: rgba(22, 33, 62, 0.6);
-    padding: 2rem;
+    margin-bottom: 0;
     border-radius: 15px;
     margin-bottom: 2rem;
+
+.results-card-title {
+    margin-bottom: 0.55rem;
+    color: var(--color-light-blue);
+    font-size: 1.02rem;
+}
+
+.results-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem 0.8rem;
+}
+
+.results-list-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.36rem 0.52rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(10, 10, 46, 0.35);
+    font-size: 0.92rem;
+}
+
+.results-list-item.ok {
+    border-color: rgba(122, 229, 130, 0.4);
+}
+
+.results-list-item.bad {
+    border-color: rgba(255, 107, 107, 0.4);
+}
+
+.results-item-name {
+    color: var(--color-white);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.results-item-points {
+    color: var(--color-light-blue);
+    font-weight: 600;
+    flex-shrink: 0;
+}
     border: 1px solid var(--color-purple);
 }
 
-.recommendations {
+    padding: 0.9rem 1rem;
     background: rgba(123, 44, 191, 0.1);
-    padding: 2rem;
+    margin-bottom: 0;
     border-radius: 15px;
     margin-bottom: 2rem;
     border: 1px solid var(--color-purple);
 }
 
-.recommendations h3 {
+    margin-bottom: 0.45rem;
+    font-size: 1rem;
+}
+
+.recommendations-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.recommendations-item {
+    padding: 0.32rem 0.2rem;
+    font-size: 0.94rem;
+    line-height: 1.35;
+    color: var(--color-gray);
+}
+
+.recommendations-success {
+    font-size: 0.95rem;
+    color: var(--color-light-blue);
+    margin: 0;
+}
+
+#results-container .achievements-section {
+    margin: 0 !important;
+    background: rgba(10, 10, 46, 0.35);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    border-radius: 15px;
+    padding: 0.7rem 0.8rem;
+    grid-column: 1 / -1;
+}
+
+#results-container .achievements-section h3 {
+    margin-bottom: 0.6rem !important;
+    font-size: 1rem;
+}
+
+#results-container .achievements-container {
+    padding: 0.25rem;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+    background: transparent;
+}
+
+#results-container .achievement-badge {
+    margin: 0;
+    padding: 0.46rem 0.52rem;
+    border-radius: 10px;
+    gap: 0.35rem;
+}
+
+#results-container .achievement-icon {
+    font-size: 1.2rem;
+}
+
+#results-container .achievement-name {
+    font-size: 0.78rem;
+}
+
+#results-container .achievement-description {
+    font-size: 0.67rem;
+    line-height: 1.2;
+}
     color: var(--color-light-blue);
     margin-bottom: 1rem;
 }
-
-.results-actions {
+    gap: 0.8rem;
+    justify-content: flex-start;
     display: flex;
+    grid-column: 1 / -1;
+}
+
+#results-container .results-actions .btn {
+    min-width: 190px;
+    padding: 11px 22px;
+    font-size: 0.95rem;
     gap: 2rem;
     justify-content: center;
     flex-wrap: wrap;
@@ -596,14 +838,27 @@ h1, h2, h3, h4 {
 }
 
 /* Flight Screen */
+#flight-screen {
+    padding: 14px 0;
+}
+
+#flight-screen .container {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+#flight-screen .screen-title {
+    margin-bottom: 0.8rem;
+}
+
 .flight-display {
     position: relative;
-    height: 400px;
+    height: min(42vh, 320px);
     background: linear-gradient(180deg, rgba(10, 0, 21, 0.9), rgba(22, 33, 62, 0.5));
     border: 2px solid rgba(0, 240, 255, 0.3);
     border-radius: 20px;
     overflow: hidden;
-    margin: 2rem 0;
+    margin: 0.8rem 0;
 }
 
 .spaceship-flight {
@@ -664,9 +919,14 @@ h1, h2, h3, h4 {
 .flight-progress {
     text-align: center;
     font-family: 'Orbitron', sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     color: var(--neon-cyan);
-    margin-top: 2rem;
+    margin-top: 0.65rem;
+}
+
+#flight-screen .resource-panel {
+    margin: 0.55rem 0;
+    padding: 0.9rem;
 }
 
 /* Адаптивность */
@@ -717,6 +977,18 @@ h1, h2, h3, h4 {
 
     .results-actions {
         flex-direction: column;
+    }
+
+    #results-container .results-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .results-list {
+        grid-template-columns: 1fr;
+    }
+
+    #results-container .achievements-container {
+        grid-template-columns: 1fr;
     }
 
     .screen-header {
