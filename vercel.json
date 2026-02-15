@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "echo 'Skip Electron build for Vercel web deploy'",
+  "outputDirectory": "src",
+  "cleanUrls": true,
+  "trailingSlash": false
+}
